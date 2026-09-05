@@ -41,8 +41,8 @@ export function calculateRisk(
 }
 
 export const RISK_LEVEL_COLORS: Record<RiskLevel, { text: string; bg: string; border: string; glow: string }> = {
-  LOW: { text: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/40", glow: "shadow-emerald-500/20" },
-  MEDIUM: { text: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/40", glow: "shadow-amber-500/20" },
-  ELEVATED: { text: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/40", glow: "shadow-orange-500/20" },
-  HIGH: { text: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/40", glow: "shadow-red-500/20" },
+  LOW: { text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-300", glow: "shadow-emerald-100" },
+  MEDIUM: { text: "text-amber-700", bg: "bg-amber-50", border: "border-amber-300", glow: "shadow-amber-100" },
+  ELEVATED: { text: "text-orange-700", bg: "bg-orange-50", border: "border-orange-300", glow: "shadow-orange-100" },
+  HIGH: { text: "text-red-700", bg: "bg-red-50", border: "border-red-300", glow: "shadow-red-100" },
 };

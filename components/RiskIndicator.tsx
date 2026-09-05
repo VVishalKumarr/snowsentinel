@@ -31,7 +31,7 @@ export default function RiskIndicator({ level, size = "lg" }: RiskIndicatorProps
 
   return (
     <div
-      className={`inline-flex items-center gap-3 rounded-xl border px-5 py-3 shadow-lg ${colors.bg} ${colors.border} ${colors.glow}`}
+      className={`inline-flex items-center gap-3 rounded-xl border px-5 py-3 shadow-sm ${colors.bg} ${colors.border}`}
     >
       <Icon className={`h-6 w-6 ${colors.text}`} strokeWidth={1.75} />
       <span className={`text-xl font-bold tracking-wide ${colors.text}`}>{level}</span>
@@ -50,7 +50,7 @@ export function RiskScale({ active }: { active: RiskLevel }) {
           <div
             key={lvl}
             className={`flex-1 rounded-md border py-1.5 text-center text-[10px] font-semibold tracking-wide transition-all ${
-              isActive ? `${colors.bg} ${colors.border} ${colors.text}` : "border-white/5 text-slate-600"
+              isActive ? `${colors.bg} ${colors.border} ${colors.text}` : "border-slate-200 text-slate-400"
             }`}
           >
             {lvl}

@@ -5,6 +5,9 @@ import { MapContainer, TileLayer, Polygon, Polyline, Marker, Popup, CircleMarker
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { HazardScenario, Settlement, Infrastructure } from "@/lib/types";
+import type { Shelter, EmergencyService, Ambulance } from "@/lib/emergencyTypes";
+import { buildPriorityZones } from "@/lib/emergencyData";
+import { DEFAULT_LAYERS, type MapLayerToggles } from "@/lib/mapLayers";
 
 const INFRA_EMOJI: Record<Infrastructure["type"], string> = {
   road: "🛣️",
@@ -13,9 +16,24 @@ const INFRA_EMOJI: Record<Infrastructure["type"], string> = {
   school: "🏫",
 };
 
+const SERVICE_EMOJI: Record<EmergencyService["type"], string> = {
+  hospital: "🏥",
+  police: "👮",
+  fire: "🚒",
+  ambulance: "🚑",
+  response_center: "🏢",
+};
+
+const PRIORITY_COLOR: Record<number, string> = {
+  1: "#dc2626",
+  2: "#f97316",
+  3: "#eab308",
+  4: "#16a34a",
+};
+
 function emojiIcon(emoji: string, size = 26) {
   return L.divIcon({
-    html: `<div style="font-size:${size}px;line-height:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.7))">${emoji}</div>`,
+    html: `<div style="font-size:${size}px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.35))">${emoji}</div>`,
     className: "",
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
@@ -41,6 +59,10 @@ interface HazardMapProps {
   onSelectSettlement: (s: Settlement | null) => void;
   selectedSettlementId: string | null;
   onSimulationComplete: () => void;
+  layers?: MapLayerToggles;
+  shelters?: Shelter[];
+  services?: EmergencyService[];
+  ambulances?: Ambulance[];
 }
 
 export default function HazardMap({
@@ -49,6 +71,10 @@ export default function HazardMap({
   onSelectSettlement,
   selectedSettlementId,
   onSimulationComplete,
+  layers = DEFAULT_LAYERS,
+  shelters = [],
+  services = [],
+  ambulances = [],
 }: HazardMapProps) {
   const [progress, setProgress] = useState(0);
   const [simulating, setSimulating] = useState(false);
@@ -82,26 +108,30 @@ export default function HazardMap({
 
   const { drawn, tip } = interpolatePath(scenario.impactPath, progress);
   const selectedSettlement = scenario.settlements.find((s) => s.id === selectedSettlementId) ?? null;
+  const priorityZones = buildPriorityZones(scenario);
 
   return (
-    <MapContainer center={scenario.region.center} zoom={12} className="dark-tiles h-full w-full" scrollWheelZoom>
+    <MapContainer center={scenario.region.center} zoom={12} className="h-full w-full" scrollWheelZoom>
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       />
 
-      {scenario.impactZones.map((zone) => (
-        <Polygon
-          key={zone.id}
-          positions={zone.positions}
-          pathOptions={{ color: zone.color, weight: 1, fillColor: zone.color, fillOpacity: 0.15 }}
-        />
-      ))}
+      {layers.hazard &&
+        scenario.impactZones.map((zone) => (
+          <Polygon
+            key={zone.id}
+            positions={zone.positions}
+            pathOptions={{ color: zone.color, weight: 1, fillColor: zone.color, fillOpacity: 0.15 }}
+          />
+        ))}
 
-      <Polyline
-        positions={scenario.impactPath}
-        pathOptions={{ color: "#94a3b8", weight: 2, opacity: 0.35, dashArray: "4 6" }}
-      />
+      {layers.hazard && (
+        <Polyline
+          positions={scenario.impactPath}
+          pathOptions={{ color: "#94a3b8", weight: 2, opacity: 0.5, dashArray: "4 6" }}
+        />
+      )}
 
       {(simulating || progress > 0) && (
         <Polyline positions={drawn} pathOptions={{ color: "#f97316", weight: 3, opacity: 0.9 }} />
@@ -119,9 +149,28 @@ export default function HazardMap({
         <CircleMarker
           center={selectedSettlement.position}
           radius={16}
-          pathOptions={{ color: "#38bdf8", weight: 2, fillOpacity: 0, dashArray: "3 4" }}
+          pathOptions={{ color: "#0f766e", weight: 2, fillOpacity: 0, dashArray: "3 4" }}
         />
       )}
+
+      {layers.priority &&
+        priorityZones.map((pz) => {
+          const settlement = scenario.settlements.find((s) => s.id === pz.settlementId);
+          if (!settlement) return null;
+          return (
+            <CircleMarker
+              key={pz.id}
+              center={settlement.position}
+              radius={22}
+              pathOptions={{
+                color: PRIORITY_COLOR[pz.level],
+                weight: 2,
+                fillColor: PRIORITY_COLOR[pz.level],
+                fillOpacity: 0.12,
+              }}
+            />
+          );
+        })}
 
       <Marker position={scenario.impactPath[0]} icon={emojiIcon("🏔️", 30)}>
         <Popup>Mountain / source zone — demo marker</Popup>
@@ -136,11 +185,72 @@ export default function HazardMap({
         />
       ))}
 
-      {scenario.infrastructure.map((infra) => (
-        <Marker key={infra.id} position={infra.position} icon={emojiIcon(INFRA_EMOJI[infra.type], 20)}>
-          <Popup>{infra.name}</Popup>
-        </Marker>
-      ))}
+      {scenario.infrastructure
+        .filter((infra) => {
+          if (infra.type === "road" || infra.type === "bridge") return layers.roads;
+          if (infra.type === "medical") return layers.hospitals;
+          if (infra.type === "school") return layers.safeZones;
+          return true;
+        })
+        .map((infra) => (
+          <Marker key={infra.id} position={infra.position} icon={emojiIcon(INFRA_EMOJI[infra.type], 20)}>
+            <Popup>{infra.name}</Popup>
+          </Marker>
+        ))}
+
+      {layers.shelters &&
+        shelters.map((sh) => (
+          <Marker key={sh.id} position={sh.position} icon={emojiIcon(sh.isOpen ? "⛺" : "🚫", 22)}>
+            <Popup>
+              <strong>{sh.name}</strong>
+              <br />
+              {sh.isOpen ? `${sh.capacity - sh.occupied} spaces available` : "Currently closed"}
+            </Popup>
+          </Marker>
+        ))}
+
+      {layers.safeZones &&
+        shelters
+          .filter((sh) => sh.isOpen)
+          .map((sh) => (
+            <Marker key={`safe-${sh.id}`} position={sh.position} icon={emojiIcon("🟢", 16)} />
+          ))}
+
+      {layers.hospitals &&
+        services
+          .filter((s) => s.type === "hospital")
+          .map((s) => (
+            <Marker key={s.id} position={s.position} icon={emojiIcon(SERVICE_EMOJI.hospital, 22)}>
+              <Popup>{s.name}</Popup>
+            </Marker>
+          ))}
+
+      {layers.police &&
+        services
+          .filter((s) => s.type === "police")
+          .map((s) => (
+            <Marker key={s.id} position={s.position} icon={emojiIcon(SERVICE_EMOJI.police, 22)}>
+              <Popup>{s.name}</Popup>
+            </Marker>
+          ))}
+
+      {layers.fire &&
+        services
+          .filter((s) => s.type === "fire")
+          .map((s) => (
+            <Marker key={s.id} position={s.position} icon={emojiIcon(SERVICE_EMOJI.fire, 22)}>
+              <Popup>{s.name}</Popup>
+            </Marker>
+          ))}
+
+      {layers.ambulances &&
+        ambulances.map((a) => (
+          <Marker key={a.id} position={a.position} icon={emojiIcon("🚑", 20)}>
+            <Popup>
+              {a.name} — {a.status}
+            </Popup>
+          </Marker>
+        ))}
     </MapContainer>
   );
 }

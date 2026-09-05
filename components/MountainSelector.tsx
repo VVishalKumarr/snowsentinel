@@ -34,10 +34,10 @@ export default function MountainSelector() {
         <div className="relative">
           <select
             defaultValue="khumbu"
-            className="appearance-none rounded-lg border border-white/10 bg-white/5 py-1.5 pl-3 pr-8 text-sm text-slate-200 outline-none focus:border-cyan-500/50"
+            className="appearance-none rounded-lg border border-slate-200 bg-white py-1.5 pl-3 pr-8 text-sm text-slate-800 outline-none focus:border-teal-400"
           >
             {REGIONS.map((r) => (
-              <option key={r.id} value={r.id} disabled={!r.available} className="bg-[#0d1420]">
+              <option key={r.id} value={r.id} disabled={!r.available}>
                 {r.name}
               </option>
             ))}
@@ -47,13 +47,13 @@ export default function MountainSelector() {
       </ControlBlock>
 
       <ControlBlock icon={Calendar} label="OBSERVATION">
-        <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-slate-200">
+        <div className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-800">
           Current
         </div>
       </ControlBlock>
 
       <ControlBlock icon={Calendar} label="DATE">
-        <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 font-mono text-sm text-cyan-300">
+        <div className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-mono text-sm text-teal-700">
           {scenario.observationCurrent.date}
         </div>
       </ControlBlock>
@@ -63,15 +63,15 @@ export default function MountainSelector() {
           <select
             value={scenarioId}
             onChange={(e) => setScenarioId(e.target.value)}
-            className="appearance-none rounded-lg border border-cyan-500/30 bg-cyan-500/10 py-1.5 pl-3 pr-8 text-sm text-cyan-200 outline-none focus:border-cyan-400/60"
+            className="appearance-none rounded-lg border border-teal-300 bg-teal-50 py-1.5 pl-3 pr-8 text-sm text-teal-800 outline-none focus:border-teal-500"
           >
             {scenarios.map((s) => (
-              <option key={s.id} value={s.id} className="bg-[#0d1420] text-slate-200">
+              <option key={s.id} value={s.id}>
                 {s.name}
               </option>
             ))}
           </select>
-          <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-cyan-400" />
+          <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-teal-600" />
         </div>
       </ControlBlock>
     </div>

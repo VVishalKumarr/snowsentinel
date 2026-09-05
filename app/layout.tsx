@@ -1,6 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ScenarioProvider } from "@/lib/ScenarioContext";
+import { AppStateProvider } from "@/lib/AppStateContext";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,19 +16,30 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SnowSentinel — Mountain Hazard Monitor",
+  title: "SnowSentinel — Mountain Hazard & Emergency Response",
   description:
-    "SnowSentinel is a hackathon prototype for AI-assisted mountain hazard monitoring: satellite observation, change detection, experimental risk assessment, and simulated impact mapping.",
+    "SnowSentinel is a hackathon prototype connecting satellite-based mountain hazard monitoring with emergency preparedness: shelters, nearby help, one-tap SOS, family safety, and offline-first access.",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0f766e",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[var(--background)] text-[var(--foreground)]">
-        <ScenarioProvider>{children}</ScenarioProvider>
+        <ScenarioProvider>
+          <AppStateProvider>
+            <ServiceWorkerRegister />
+            {children}
+          </AppStateProvider>
+        </ScenarioProvider>
       </body>
     </html>
   );

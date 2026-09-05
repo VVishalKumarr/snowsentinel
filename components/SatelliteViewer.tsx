@@ -22,7 +22,7 @@ export default function SatelliteViewer({ scenario, variant, compact = false }: 
     variant === "previous" ? "PREVIOUS OBSERVATION" : variant === "current" ? "CURRENT OBSERVATION" : "CHANGE COMPARISON";
 
   return (
-    <div className={`relative w-full overflow-hidden rounded-xl border border-white/10 bg-[#060b12] ${compact ? "aspect-[4/3]" : "aspect-[16/9]"}`}>
+    <div className={`relative w-full overflow-hidden rounded-xl border border-slate-200 bg-[#060b12] shadow-sm ${compact ? "aspect-[4/3]" : "aspect-[16/9]"}`}>
       <svg viewBox="0 0 800 500" className="h-full w-full" preserveAspectRatio="xMidYMid slice">
         <defs>
           <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
