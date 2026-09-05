@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { Siren, Share2, PhoneCall, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { Siren, Share2, PhoneCall, CheckCircle2, Clock, XCircle, MessageSquareText } from "lucide-react";
 import { useAppState } from "@/lib/AppStateContext";
 import { emergencyContacts, telHref } from "@/lib/emergencyContacts.config";
+import { isNativeSmsAvailable, sendNativeSms, buildSmsComposeHref, cleanPhoneNumber } from "@/lib/nativeSms";
 
 const HOLD_MS = 2000;
 
@@ -28,12 +29,15 @@ function getLocation(): Promise<{ lat: number; lng: number } | null> {
   });
 }
 
+type SmsOutcome = { mode: "native"; delivered: number; attempted: number } | { mode: "compose"; attempted: number } | { mode: "none" };
+
 export default function SOSButton({ compact = false }: { compact?: boolean }) {
   const { trustedContacts, familyMembers, submitSOS, sosQueue } = useAppState();
   const [holdProgress, setHoldProgress] = useState(0);
   const [holding, setHolding] = useState(false);
   const [sending, setSending] = useState(false);
   const [lastRequestId, setLastRequestId] = useState<string | null>(null);
+  const [smsOutcome, setSmsOutcome] = useState<SmsOutcome | null>(null);
   const [error, setError] = useState<string | null>(null);
   const lastRequest = sosQueue.find((r) => r.id === lastRequestId) ?? null;
   const rafRef = useRef<number | null>(null);
@@ -41,8 +45,10 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
 
   const recipients =
     trustedContacts.length > 0
-      ? trustedContacts.map((c) => ({ id: c.id, name: c.name }))
-      : familyMembers.filter((f) => f.relationship !== "You").map((f) => ({ id: f.id, name: f.name }));
+      ? trustedContacts.map((c) => ({ id: c.id, name: c.name, contactMethod: c.contactMethod }))
+      : familyMembers
+          .filter((f) => f.relationship !== "You")
+          .map((f) => ({ id: f.id, name: f.name, contactMethod: f.contactMethod }));
 
   const cancelHold = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -55,6 +61,7 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
     cancelHold();
     setSending(true);
     setError(null);
+    setSmsOutcome(null);
     try {
       const location = await getLocation();
       const request = submitSOS(
@@ -63,12 +70,36 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
       );
       setLastRequestId(request.id);
 
-      if (request.status === "SENT" && typeof navigator !== "undefined" && "share" in navigator) {
+      const numbers = recipients
+        .map((r) => cleanPhoneNumber(r.contactMethod ?? ""))
+        .filter((n): n is string => !!n);
+
+      if (numbers.length > 0 && isNativeSmsAvailable()) {
+        let delivered = 0;
+        for (const num of numbers) {
+          const ok = await sendNativeSms(num, request.message);
+          if (ok) delivered++;
+        }
+        if (delivered > 0) {
+          setSmsOutcome({ mode: "native", delivered, attempted: numbers.length });
+        } else if (typeof window !== "undefined") {
+          // permission denied or send failed on-device — fall back to a
+          // compose screen the user can send from manually.
+          window.location.href = buildSmsComposeHref(numbers, request.message);
+          setSmsOutcome({ mode: "compose", attempted: numbers.length });
+        }
+      } else if (numbers.length > 0 && typeof window !== "undefined") {
+        window.location.href = buildSmsComposeHref(numbers, request.message);
+        setSmsOutcome({ mode: "compose", attempted: numbers.length });
+      } else if (typeof navigator !== "undefined" && "share" in navigator) {
         try {
           await navigator.share({ title: "SOS Alert", text: request.message });
         } catch {
           // user cancelled share sheet — the request itself is still recorded as SENT/QUEUED
         }
+        setSmsOutcome({ mode: "none" });
+      } else {
+        setSmsOutcome({ mode: "none" });
       }
     } catch {
       setError("Could not process SOS on this device. Use the emergency call button below.");
@@ -76,7 +107,7 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
       setSending(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cancelHold, submitSOS]);
+  }, [cancelHold, submitSOS, JSON.stringify(recipients)]);
 
   const startHold = useCallback(() => {
     if (sending) return;
@@ -142,6 +173,13 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
         {sending ? "Sending…" : "Hold for 2 seconds to send SOS."}
       </p>
 
+      {isNativeSmsAvailable() && (
+        <p className="max-w-xs text-center text-[10px] text-slate-400">
+          On this device, SOS sends a real SMS directly to your saved contacts&apos; phone numbers. Standard
+          messaging rates from your carrier may apply.
+        </p>
+      )}
+
       {lastRequest && (
         <div
           className={`w-full max-w-sm rounded-xl border p-3 text-xs ${
@@ -160,6 +198,21 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
             {lastRequest.status === "QUEUED" && "SOS QUEUED — WILL SEND WHEN CONNECTION RETURNS"}
             {lastRequest.status === "FAILED" && "SOS FAILED"}
           </div>
+
+          {smsOutcome?.mode === "native" && (
+            <p className="mt-1 flex items-center gap-1.5">
+              <MessageSquareText className="h-3.5 w-3.5 flex-shrink-0" />
+              Text message sent directly to {smsOutcome.delivered} of {smsOutcome.attempted} contact(s) — no
+              further action needed.
+            </p>
+          )}
+          {smsOutcome?.mode === "compose" && (
+            <p className="mt-1 flex items-center gap-1.5">
+              <MessageSquareText className="h-3.5 w-3.5 flex-shrink-0" />
+              Opened your Messages app with the alert ready to go — tap Send there to actually deliver it.
+            </p>
+          )}
+
           {lastRequest.status === "QUEUED" && (
             <p className="mt-1">
               Saved on this device. It has not been delivered yet — no message has left this phone.
@@ -168,7 +221,7 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
           <pre className="mt-2 whitespace-pre-wrap rounded bg-white/60 p-2 font-sans text-[11px]">
             {lastRequest.message}
           </pre>
-          {typeof navigator !== "undefined" && !("share" in navigator) && (
+          {smsOutcome?.mode === "none" && typeof navigator !== "undefined" && !("share" in navigator) && (
             <p className="mt-2 text-[10px]">
               Automatic sharing isn&apos;t supported in this browser — copy the message above and send it
               manually, or use the call button below.
@@ -192,7 +245,7 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
         </span>
       )}
 
-      {typeof navigator !== "undefined" && "share" in navigator && lastRequest && (
+      {smsOutcome?.mode === "none" && typeof navigator !== "undefined" && "share" in navigator && lastRequest && (
         <button
           onClick={() => navigator.share({ title: "SOS Alert", text: lastRequest.message }).catch(() => {})}
           className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500 hover:text-slate-700"

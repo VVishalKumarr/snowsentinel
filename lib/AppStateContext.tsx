@@ -229,7 +229,7 @@ export function useAppState() {
 
 function buildSOSMessage(location: { lat: number; lng: number } | null): string {
   const locationText = location
-    ? `https://www.openstreetmap.org/?mlat=${location.lat}&mlon=${location.lng}#map=16/${location.lat}/${location.lng}`
+    ? `https://www.google.com/maps/search/?api=1&query=${location.lat},${location.lng}`
     : "Location unavailable";
   return [
     "🚨 SOS ALERT",
