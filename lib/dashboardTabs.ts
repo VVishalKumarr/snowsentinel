@@ -1,3 +1,5 @@
+import type { TranslationKey } from "./i18n/en";
+
 export type DashboardTab =
   | "overview"
   | "satellite"
@@ -8,13 +10,13 @@ export type DashboardTab =
   | "family"
   | "emergency";
 
-export const DASHBOARD_TABS: { id: DashboardTab; label: string }[] = [
-  { id: "overview", label: "OVERVIEW" },
-  { id: "satellite", label: "SATELLITE" },
-  { id: "risk", label: "RISK" },
-  { id: "impact", label: "IMPACT MAP" },
-  { id: "help", label: "NEARBY HELP" },
-  { id: "shelters", label: "SHELTERS" },
-  { id: "family", label: "FAMILY SAFETY" },
-  { id: "emergency", label: "EMERGENCY" },
+export const DASHBOARD_TABS: { id: DashboardTab; labelKey: TranslationKey }[] = [
+  { id: "overview", labelKey: "tabOverview" },
+  { id: "satellite", labelKey: "tabSatellite" },
+  { id: "risk", labelKey: "tabRisk" },
+  { id: "impact", labelKey: "tabImpact" },
+  { id: "help", labelKey: "tabHelp" },
+  { id: "shelters", labelKey: "tabShelters" },
+  { id: "family", labelKey: "tabFamily" },
+  { id: "emergency", labelKey: "tabEmergency" },
 ];

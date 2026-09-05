@@ -31,6 +31,23 @@ const PRIORITY_COLOR: Record<number, string> = {
   4: "#16a34a",
 };
 
+function googleMapsUrl(position: [number, number]): string {
+  return `https://www.google.com/maps/search/?api=1&query=${position[0]},${position[1]}`;
+}
+
+function MapsLink({ position }: { position: [number, number] }) {
+  return (
+    <a
+      href={googleMapsUrl(position)}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-1.5 inline-block rounded bg-teal-600 px-2 py-1 text-[11px] font-semibold text-white no-underline hover:bg-teal-700"
+    >
+      OPEN IN GOOGLE MAPS
+    </a>
+  );
+}
+
 function emojiIcon(emoji: string, size = 26) {
   return L.divIcon({
     html: `<div style="font-size:${size}px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.35))">${emoji}</div>`,
@@ -173,7 +190,11 @@ export default function HazardMap({
         })}
 
       <Marker position={scenario.impactPath[0]} icon={emojiIcon("🏔️", 30)}>
-        <Popup>Mountain / source zone — demo marker</Popup>
+        <Popup>
+          Mountain / source zone — demo marker
+          <br />
+          <MapsLink position={scenario.impactPath[0]} />
+        </Popup>
       </Marker>
 
       {scenario.settlements.map((s) => (
@@ -182,7 +203,13 @@ export default function HazardMap({
           position={s.position}
           icon={emojiIcon("🏠", 24)}
           eventHandlers={{ click: () => onSelectSettlement(s) }}
-        />
+        >
+          <Popup>
+            <strong>{s.name}</strong>
+            <br />
+            <MapsLink position={s.position} />
+          </Popup>
+        </Marker>
       ))}
 
       {scenario.infrastructure
@@ -194,7 +221,11 @@ export default function HazardMap({
         })
         .map((infra) => (
           <Marker key={infra.id} position={infra.position} icon={emojiIcon(INFRA_EMOJI[infra.type], 20)}>
-            <Popup>{infra.name}</Popup>
+            <Popup>
+              {infra.name}
+              <br />
+              <MapsLink position={infra.position} />
+            </Popup>
           </Marker>
         ))}
 
@@ -205,6 +236,8 @@ export default function HazardMap({
               <strong>{sh.name}</strong>
               <br />
               {sh.isOpen ? `${sh.capacity - sh.occupied} spaces available` : "Currently closed"}
+              <br />
+              <MapsLink position={sh.position} />
             </Popup>
           </Marker>
         ))}
@@ -221,7 +254,11 @@ export default function HazardMap({
           .filter((s) => s.type === "hospital")
           .map((s) => (
             <Marker key={s.id} position={s.position} icon={emojiIcon(SERVICE_EMOJI.hospital, 22)}>
-              <Popup>{s.name}</Popup>
+              <Popup>
+                {s.name}
+                <br />
+                <MapsLink position={s.position} />
+              </Popup>
             </Marker>
           ))}
 
@@ -230,7 +267,11 @@ export default function HazardMap({
           .filter((s) => s.type === "police")
           .map((s) => (
             <Marker key={s.id} position={s.position} icon={emojiIcon(SERVICE_EMOJI.police, 22)}>
-              <Popup>{s.name}</Popup>
+              <Popup>
+                {s.name}
+                <br />
+                <MapsLink position={s.position} />
+              </Popup>
             </Marker>
           ))}
 
@@ -239,7 +280,11 @@ export default function HazardMap({
           .filter((s) => s.type === "fire")
           .map((s) => (
             <Marker key={s.id} position={s.position} icon={emojiIcon(SERVICE_EMOJI.fire, 22)}>
-              <Popup>{s.name}</Popup>
+              <Popup>
+                {s.name}
+                <br />
+                <MapsLink position={s.position} />
+              </Popup>
             </Marker>
           ))}
 
@@ -248,6 +293,8 @@ export default function HazardMap({
           <Marker key={a.id} position={a.position} icon={emojiIcon("🚑", 20)}>
             <Popup>
               {a.name} — {a.status}
+              <br />
+              <MapsLink position={a.position} />
             </Popup>
           </Marker>
         ))}

@@ -17,8 +17,7 @@ import ShelterList from "@/components/ShelterList";
 import NearbyHelpList from "@/components/NearbyHelpList";
 import AmbulanceList from "@/components/AmbulanceList";
 import VolunteerList from "@/components/VolunteerList";
-import FamilySafetyPanel from "@/components/FamilySafetyPanel";
-import ContactSetup from "@/components/ContactSetup";
+import FamilyNetworkPanel from "@/components/FamilyNetworkPanel";
 import HelplineSection from "@/components/HelplineSection";
 import SOSButton from "@/components/SOSButton";
 import OfflineGuide from "@/components/OfflineGuide";
@@ -30,6 +29,7 @@ import OverviewMap from "@/components/OverviewMap";
 import MountainSelector from "@/components/MountainSelector";
 import { useScenario } from "@/lib/ScenarioContext";
 import { useAppState } from "@/lib/AppStateContext";
+import { useLanguage } from "@/lib/i18n";
 import { useDisasterSimulation } from "@/lib/useDisasterSimulation";
 import { getShelters, getAmbulances, VOLUNTEERS } from "@/lib/emergencyData";
 import { DASHBOARD_TABS, type DashboardTab } from "@/lib/dashboardTabs";
@@ -44,6 +44,7 @@ function DashboardInner() {
 
   const { scenario } = useScenario();
   const { familyMembers } = useAppState();
+  const { t } = useLanguage();
   const simulation = useDisasterSimulation(setTab, () => setImpactSignal((s) => s + 1));
 
   const shelters = getShelters(scenario.region.id);
@@ -60,7 +61,7 @@ function DashboardInner() {
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-4 text-xs text-slate-500">
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 pulse-dot" /> SYSTEM MONITORING
+              <span className="h-2 w-2 rounded-full bg-emerald-500 pulse-dot" /> {t("systemMonitoring")}
             </span>
             <span className="flex items-center gap-1.5">
               <MapPin className="h-3.5 w-3.5" /> {scenario.region.shortName} (Demo Himalayan Region)
@@ -70,15 +71,15 @@ function DashboardInner() {
         </div>
 
         <nav className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 pb-2 sm:px-6">
-          {DASHBOARD_TABS.map((t) => (
+          {DASHBOARD_TABS.map((dt) => (
             <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
+              key={dt.id}
+              onClick={() => setTab(dt.id)}
               className={`whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-semibold tracking-wide transition-colors ${
-                tab === t.id ? "bg-teal-50 text-teal-700" : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                tab === dt.id ? "bg-teal-50 text-teal-700" : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
               }`}
             >
-              {t.label}
+              {t(dt.labelKey)}
             </button>
           ))}
         </nav>
@@ -110,13 +111,13 @@ function DashboardInner() {
 
             <div className="glass-panel flex flex-wrap items-center justify-between gap-4 rounded-2xl p-4 sm:p-5">
               <div>
-                <div className="text-[10px] font-medium tracking-wide text-slate-500">CURRENT HAZARD</div>
+                <div className="text-[10px] font-medium tracking-wide text-slate-500">{t("currentHazard")}</div>
                 <div className="mt-1">
                   <RiskIndicator level={scenario.risk.riskLevel} />
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-[10px] tracking-wide text-slate-500">RISK</div>
+                <div className="text-[10px] tracking-wide text-slate-500">{t("riskLabel")}</div>
                 <div className="text-3xl font-bold text-slate-800">
                   {scenario.risk.riskScore}
                   <span className="text-lg text-slate-400">/100</span>
@@ -127,18 +128,18 @@ function DashboardInner() {
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <StatCard
                 icon={SatelliteIcon}
-                label="Satellite Change"
+                label={t("statSatelliteChange")}
                 value={`+${scenario.environmentalChange.deltaFromPrevious}%`}
               />
-              <StatCard icon={ShieldHalf} label="Priority Zones" value={scenario.settlements.length} />
-              <StatCard icon={Home} label="Nearby Shelters" value={shelters.length} />
-              <StatCard icon={LifeBuoy} label="Available Ambulances" value={availableAmbulances} />
-              <StatCard icon={Users2} label="Volunteers Available" value={availableVolunteers} />
+              <StatCard icon={ShieldHalf} label={t("statPriorityZones")} value={scenario.settlements.length} />
+              <StatCard icon={Home} label={t("statNearbyShelters")} value={shelters.length} />
+              <StatCard icon={LifeBuoy} label={t("statAvailableAmbulances")} value={availableAmbulances} />
+              <StatCard icon={Users2} label={t("statVolunteersAvailable")} value={availableVolunteers} />
               <StatCard
                 icon={Users2}
-                label="Family Safety"
+                label={t("statFamilySafety")}
                 value={`${safeCount}/${familyMembers.length}`}
-                sublabel="checked in"
+                sublabel={t("statCheckedIn")}
               />
             </div>
 
@@ -173,12 +174,7 @@ function DashboardInner() {
 
         {tab === "shelters" && <ShelterList />}
 
-        {tab === "family" && (
-          <div className="space-y-6">
-            <FamilySafetyPanel />
-            <ContactSetup />
-          </div>
-        )}
+        {tab === "family" && <FamilyNetworkPanel />}
 
         {tab === "emergency" && (
           <div className="space-y-6">

@@ -1,12 +1,34 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
-import { Siren, Share2, PhoneCall, CheckCircle2, Clock, XCircle, MessageSquareText } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Siren,
+  PhoneCall,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  MapPin,
+  MessageCircle,
+  MessageSquareText,
+  Share2,
+} from "lucide-react";
 import { useAppState } from "@/lib/AppStateContext";
+import { useAuth } from "@/lib/AuthContext";
+import { useLanguage } from "@/lib/i18n";
 import { emergencyContacts, telHref } from "@/lib/emergencyContacts.config";
 import { isNativeSmsAvailable, sendNativeSms, buildSmsComposeHref, cleanPhoneNumber } from "@/lib/nativeSms";
 
 const HOLD_MS = 2000;
+
+interface Recipient {
+  id: string;
+  name: string;
+  phoneNumber?: string;
+}
+
+type FlowStep = "idle" | "locating" | "confirm" | "result";
+type ShareChannel = "whatsapp" | "sms" | "instagram" | "facebook" | "other";
+type ResultStatus = "SHARED" | "QUEUED" | "CANCELLED";
 
 function getLocation(): Promise<{ lat: number; lng: number } | null> {
   return new Promise((resolve) => {
@@ -29,26 +51,78 @@ function getLocation(): Promise<{ lat: number; lng: number } | null> {
   });
 }
 
-type SmsOutcome = { mode: "native"; delivered: number; attempted: number } | { mode: "compose"; attempted: number } | { mode: "none" };
+function buildMessage(location: { lat: number; lng: number } | null): string {
+  const mapsLink = location
+    ? `https://www.google.com/maps/search/?api=1&query=${location.lat},${location.lng}`
+    : "Location unavailable";
+  return [
+    "🚨 SOS ALERT — I MAY NEED HELP.",
+    "",
+    "My current location:",
+    mapsLink,
+    "",
+    "Please contact me or emergency services if necessary.",
+  ].join("\n");
+}
 
 export default function SOSButton({ compact = false }: { compact?: boolean }) {
-  const { trustedContacts, familyMembers, submitSOS, sosQueue } = useAppState();
+  const { trustedContacts, familyMembers, submitSOS } = useAppState();
+  const { user, authedFetch } = useAuth();
+  const { t } = useLanguage();
+
   const [holdProgress, setHoldProgress] = useState(0);
   const [holding, setHolding] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [lastRequestId, setLastRequestId] = useState<string | null>(null);
-  const [smsOutcome, setSmsOutcome] = useState<SmsOutcome | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const lastRequest = sosQueue.find((r) => r.id === lastRequestId) ?? null;
+  const [step, setStep] = useState<FlowStep>("idle");
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [recipients, setRecipients] = useState<Recipient[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [result, setResult] = useState<{ status: ResultStatus; channel: ShareChannel | null } | null>(null);
   const rafRef = useRef<number | null>(null);
   const startRef = useRef<number>(0);
 
-  const recipients =
-    trustedContacts.length > 0
-      ? trustedContacts.map((c) => ({ id: c.id, name: c.name, contactMethod: c.contactMethod }))
-      : familyMembers
-          .filter((f) => f.relationship !== "You")
-          .map((f) => ({ id: f.id, name: f.name, contactMethod: f.contactMethod }));
+  // Prefer the real, cross-device family network when logged in; otherwise
+  // fall back to the local trusted-contacts list so SOS still works without
+  // an account.
+  useEffect(() => {
+    let cancelled = false;
+    async function loadRecipients() {
+      if (user) {
+        try {
+          const res = await authedFetch("/api/family");
+          const data = await res.json();
+          if (!cancelled) {
+            const list: Recipient[] = (data.members ?? []).map(
+              (m: { userId: number; name: string; phoneNumber: string }) => ({
+                id: String(m.userId),
+                name: m.name,
+                phoneNumber: m.phoneNumber,
+              })
+            );
+            setRecipients(list);
+            setSelected(new Set(list.map((r) => r.id)));
+          }
+          return;
+        } catch {
+          // fall through to local fallback
+        }
+      }
+      const local: Recipient[] =
+        trustedContacts.length > 0
+          ? trustedContacts.map((c) => ({ id: c.id, name: c.name, phoneNumber: c.contactMethod }))
+          : familyMembers
+              .filter((f) => f.relationship !== "You")
+              .map((f) => ({ id: f.id, name: f.name, phoneNumber: f.contactMethod }));
+      if (!cancelled) {
+        setRecipients(local);
+        setSelected(new Set(local.map((r) => r.id)));
+      }
+    }
+    loadRecipients();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const cancelHold = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -57,87 +131,270 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
     setHoldProgress(0);
   }, []);
 
-  const completeSOS = useCallback(async () => {
+  const beginFlow = useCallback(async () => {
     cancelHold();
-    setSending(true);
-    setError(null);
-    setSmsOutcome(null);
-    try {
-      const location = await getLocation();
-      const request = submitSOS(
-        recipients.map((r) => r.id),
-        location
-      );
-      setLastRequestId(request.id);
-
-      const numbers = recipients
-        .map((r) => cleanPhoneNumber(r.contactMethod ?? ""))
-        .filter((n): n is string => !!n);
-
-      if (numbers.length > 0 && isNativeSmsAvailable()) {
-        let delivered = 0;
-        for (const num of numbers) {
-          const ok = await sendNativeSms(num, request.message);
-          if (ok) delivered++;
-        }
-        if (delivered > 0) {
-          setSmsOutcome({ mode: "native", delivered, attempted: numbers.length });
-        } else if (typeof window !== "undefined") {
-          // permission denied or send failed on-device — fall back to a
-          // compose screen the user can send from manually.
-          window.location.href = buildSmsComposeHref(numbers, request.message);
-          setSmsOutcome({ mode: "compose", attempted: numbers.length });
-        }
-      } else if (numbers.length > 0 && typeof window !== "undefined") {
-        window.location.href = buildSmsComposeHref(numbers, request.message);
-        setSmsOutcome({ mode: "compose", attempted: numbers.length });
-      } else if (typeof navigator !== "undefined" && "share" in navigator) {
-        try {
-          await navigator.share({ title: "SOS Alert", text: request.message });
-        } catch {
-          // user cancelled share sheet — the request itself is still recorded as SENT/QUEUED
-        }
-        setSmsOutcome({ mode: "none" });
-      } else {
-        setSmsOutcome({ mode: "none" });
-      }
-    } catch {
-      setError("Could not process SOS on this device. Use the emergency call button below.");
-    } finally {
-      setSending(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cancelHold, submitSOS, JSON.stringify(recipients)]);
+    setStep("locating");
+    const loc = await getLocation();
+    setLocation(loc);
+    setStep("confirm");
+  }, [cancelHold]);
 
   const startHold = useCallback(() => {
-    if (sending) return;
+    if (step !== "idle") return;
     setHolding(true);
     startRef.current = performance.now();
     const tick = (now: number) => {
       const pct = Math.min(1, (now - startRef.current) / HOLD_MS);
       setHoldProgress(pct);
       if (pct >= 1) {
-        completeSOS();
+        beginFlow();
         return;
       }
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
-  }, [sending, completeSOS]);
+  }, [step, beginFlow]);
+
+  const toggleRecipient = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const finish = (status: ResultStatus, channel: ShareChannel | null) => {
+    setResult({ status, channel });
+    setStep("result");
+  };
+
+  const shareVia = async (channel: ShareChannel) => {
+    const message = buildMessage(location);
+    const chosen = recipients.filter((r) => selected.has(r.id));
+    const numbers = chosen.map((r) => cleanPhoneNumber(r.phoneNumber ?? "")).filter((n): n is string => !!n);
+
+    const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+
+    // Record the event locally (and server-side, if logged in) regardless
+    // of which channel is used — this is the audit trail, not the delivery.
+    const record = submitSOS(chosen.map((r) => r.id), location);
+    if (user) {
+      authedFetch("/api/sos", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ lat: location?.lat, lng: location?.lng, message, status: record.status }),
+      }).catch(() => {});
+    }
+
+    if (isOffline) {
+      finish("QUEUED", channel);
+      return;
+    }
+
+    try {
+      if (channel === "whatsapp") {
+        const url =
+          numbers.length === 1
+            ? `https://wa.me/${numbers[0].replace(/^\+/, "")}?text=${encodeURIComponent(message)}`
+            : `https://wa.me/?text=${encodeURIComponent(message)}`;
+        window.open(url, "_blank");
+        finish("SHARED", channel);
+        return;
+      }
+
+      if (channel === "sms") {
+        if (numbers.length > 0 && isNativeSmsAvailable()) {
+          let delivered = 0;
+          for (const num of numbers) {
+            if (await sendNativeSms(num, message)) delivered++;
+          }
+          finish(delivered > 0 ? "SHARED" : "CANCELLED", channel);
+          return;
+        }
+        if (numbers.length > 0) {
+          window.location.href = buildSmsComposeHref(numbers, message);
+          finish("SHARED", channel);
+          return;
+        }
+      }
+
+      // Instagram/Facebook cannot receive a pre-filled private message from
+      // a website — that's a real platform restriction, not a bug. The most
+      // honest option is the OS share sheet (which lists those apps if
+      // installed and able to accept shared text) with a clear fallback.
+      const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+      if (canShare) {
+        try {
+          await navigator.share({ title: "SOS Alert", text: message });
+          finish("SHARED", channel);
+        } catch {
+          finish("CANCELLED", channel);
+        }
+        return;
+      }
+
+      const canCopy = typeof navigator !== "undefined" && !!navigator.clipboard;
+      if (canCopy) {
+        await navigator.clipboard.writeText(message);
+      }
+      finish("SHARED", channel);
+    } catch {
+      finish("CANCELLED", channel);
+    }
+  };
+
+  const reset = () => {
+    setStep("idle");
+    setResult(null);
+    setLocation(null);
+  };
 
   const emergencyNumber = emergencyContacts.find((c) => c.category === "Emergency")?.number ?? "";
   const emergencyTel = telHref(emergencyNumber);
+
+  if (step === "locating") {
+    return (
+      <div className="flex flex-col items-center gap-3 py-6">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-red-200 border-t-red-600" />
+        <p className="text-xs text-slate-500">Getting your location…</p>
+      </div>
+    );
+  }
+
+  if (step === "confirm") {
+    return (
+      <div className="w-full max-w-sm space-y-4">
+        <div className="text-center">
+          <div className="text-lg font-bold text-red-600">🚨 {t("sos")}</div>
+          <p className="mt-1 text-xs text-slate-600">
+            Your current location will be shared with your selected emergency contacts.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs">
+          <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-slate-500" />
+          <span className="font-mono text-slate-700">
+            {location ? `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}` : "Location unavailable"}
+          </span>
+        </div>
+
+        {recipients.length > 0 ? (
+          <div className="space-y-1.5">
+            <div className="text-[11px] font-medium text-slate-500">{t("sosWhoShouldReceive")}</div>
+            {recipients.map((r) => (
+              <label key={r.id} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={selected.has(r.id)}
+                  onChange={() => toggleRecipient(r.id)}
+                  className="h-4 w-4 accent-red-600"
+                />
+                {r.name}
+              </label>
+            ))}
+          </div>
+        ) : (
+          <p className="text-center text-xs text-amber-700">{t("sosNoContacts")}</p>
+        )}
+
+        <div>
+          <div className="mb-1.5 text-[11px] font-medium text-slate-500">{t("sosShareVia")}</div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => shareVia("whatsapp")}
+              className="flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
+            >
+              <MessageCircle className="h-3.5 w-3.5" /> {t("sosShareWhatsApp")}
+            </button>
+            <button
+              onClick={() => shareVia("sms")}
+              className="flex items-center justify-center gap-1.5 rounded-lg bg-teal-600 py-2 text-xs font-semibold text-white hover:bg-teal-700"
+            >
+              <MessageSquareText className="h-3.5 w-3.5" /> {t("sosShareSms")}
+            </button>
+            <button
+              onClick={() => shareVia("instagram")}
+              className="flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              <span aria-hidden>📷</span> {t("sosShareInstagram")}
+            </button>
+            <button
+              onClick={() => shareVia("facebook")}
+              className="flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              <span aria-hidden>👤</span> {t("sosShareFacebook")}
+            </button>
+          </div>
+          <button
+            onClick={() => shareVia("other")}
+            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            <Share2 className="h-3.5 w-3.5" /> {t("sosShareOther")}
+          </button>
+        </div>
+
+        <button onClick={reset} className="w-full text-center text-xs text-slate-400 hover:text-slate-600">
+          Cancel
+        </button>
+      </div>
+    );
+  }
+
+  if (step === "result" && result) {
+    const message = buildMessage(location);
+    return (
+      <div className="w-full max-w-sm space-y-3 text-center">
+        <div
+          className={`flex items-center justify-center gap-1.5 rounded-xl border p-3 text-sm font-semibold ${
+            result.status === "SHARED"
+              ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+              : result.status === "QUEUED"
+              ? "border-amber-300 bg-amber-50 text-amber-800"
+              : "border-slate-300 bg-slate-100 text-slate-600"
+          }`}
+        >
+          {result.status === "SHARED" && <CheckCircle2 className="h-4 w-4" />}
+          {result.status === "QUEUED" && <Clock className="h-4 w-4" />}
+          {result.status === "CANCELLED" && <XCircle className="h-4 w-4" />}
+          {result.status === "SHARED" && t("sosShared")}
+          {result.status === "QUEUED" && `${t("sosQueued")} (OFFLINE)`}
+          {result.status === "CANCELLED" && t("sosSharingCancelled")}
+        </div>
+        {result.status === "QUEUED" && (
+          <p className="text-xs text-slate-500">Saved on this device. No message has left this phone yet.</p>
+        )}
+        <pre className="whitespace-pre-wrap rounded-lg border border-slate-200 bg-slate-50 p-3 text-left font-sans text-[11px] text-slate-600">
+          {message}
+        </pre>
+        {emergencyTel && (
+          <a
+            href={emergencyTel}
+            className="flex items-center justify-center gap-2 rounded-lg border border-red-300 bg-white px-4 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"
+          >
+            <PhoneCall className="h-3.5 w-3.5" /> Call Emergency Services
+          </a>
+        )}
+        <button
+          onClick={reset}
+          className="w-full rounded-lg border border-slate-300 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+        >
+          Done
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center gap-3">
       <div className="text-center text-xs text-slate-500">
         {recipients.length > 0 ? (
           <>
-            Alert will be sent to:{" "}
+            {t("sosRecipients")}{" "}
             <span className="font-medium text-slate-700">{recipients.map((r) => r.name).join(", ")}</span>
           </>
         ) : (
-          <span className="text-amber-700">No trusted contacts set — add one in Family Safety first.</span>
+          <span className="text-amber-700">{t("sosNoContacts")}</span>
         )}
       </div>
 
@@ -145,8 +402,7 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
         onPointerDown={startHold}
         onPointerUp={cancelHold}
         onPointerLeave={cancelHold}
-        disabled={sending}
-        className={`relative flex select-none flex-col items-center justify-center rounded-full border-4 border-red-700 bg-red-600 text-white shadow-lg transition-transform active:scale-95 disabled:opacity-60 ${
+        className={`relative flex select-none flex-col items-center justify-center rounded-full border-4 border-red-700 bg-red-600 text-white shadow-lg transition-transform active:scale-95 ${
           compact ? "h-20 w-20" : "h-36 w-36"
         } ${holding ? "" : "sos-pulse"}`}
       >
@@ -165,72 +421,11 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
           />
         </svg>
         <Siren className={compact ? "h-6 w-6" : "h-9 w-9"} strokeWidth={2} />
-        <span className={`mt-1 font-bold tracking-wide ${compact ? "text-[10px]" : "text-sm"}`}>SOS</span>
-        {!compact && <span className="text-[9px] tracking-wide opacity-90">HOLD 2 SEC</span>}
+        <span className={`mt-1 font-bold tracking-wide ${compact ? "text-[10px]" : "text-sm"}`}>{t("sos")}</span>
+        {!compact && <span className="text-[9px] tracking-wide opacity-90">{t("sosHold")}</span>}
       </button>
 
-      <p className="text-[11px] text-slate-500">
-        {sending ? "Sending…" : "Hold for 2 seconds to send SOS."}
-      </p>
-
-      {isNativeSmsAvailable() && (
-        <p className="max-w-xs text-center text-[10px] text-slate-400">
-          On this device, SOS sends a real SMS directly to your saved contacts&apos; phone numbers. Standard
-          messaging rates from your carrier may apply.
-        </p>
-      )}
-
-      {lastRequest && (
-        <div
-          className={`w-full max-w-sm rounded-xl border p-3 text-xs ${
-            lastRequest.status === "SENT"
-              ? "border-emerald-300 bg-emerald-50 text-emerald-800"
-              : lastRequest.status === "QUEUED"
-              ? "border-amber-300 bg-amber-50 text-amber-800"
-              : "border-red-300 bg-red-50 text-red-800"
-          }`}
-        >
-          <div className="flex items-center gap-1.5 font-semibold">
-            {lastRequest.status === "SENT" && <CheckCircle2 className="h-3.5 w-3.5" />}
-            {lastRequest.status === "QUEUED" && <Clock className="h-3.5 w-3.5" />}
-            {lastRequest.status === "FAILED" && <XCircle className="h-3.5 w-3.5" />}
-            {lastRequest.status === "SENT" && "SOS SENT"}
-            {lastRequest.status === "QUEUED" && "SOS QUEUED — WILL SEND WHEN CONNECTION RETURNS"}
-            {lastRequest.status === "FAILED" && "SOS FAILED"}
-          </div>
-
-          {smsOutcome?.mode === "native" && (
-            <p className="mt-1 flex items-center gap-1.5">
-              <MessageSquareText className="h-3.5 w-3.5 flex-shrink-0" />
-              Text message sent directly to {smsOutcome.delivered} of {smsOutcome.attempted} contact(s) — no
-              further action needed.
-            </p>
-          )}
-          {smsOutcome?.mode === "compose" && (
-            <p className="mt-1 flex items-center gap-1.5">
-              <MessageSquareText className="h-3.5 w-3.5 flex-shrink-0" />
-              Opened your Messages app with the alert ready to go — tap Send there to actually deliver it.
-            </p>
-          )}
-
-          {lastRequest.status === "QUEUED" && (
-            <p className="mt-1">
-              Saved on this device. It has not been delivered yet — no message has left this phone.
-            </p>
-          )}
-          <pre className="mt-2 whitespace-pre-wrap rounded bg-white/60 p-2 font-sans text-[11px]">
-            {lastRequest.message}
-          </pre>
-          {smsOutcome?.mode === "none" && typeof navigator !== "undefined" && !("share" in navigator) && (
-            <p className="mt-2 text-[10px]">
-              Automatic sharing isn&apos;t supported in this browser — copy the message above and send it
-              manually, or use the call button below.
-            </p>
-          )}
-        </div>
-      )}
-
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      <p className="text-[11px] text-slate-500">{t("sosHoldInstruction")}</p>
 
       {emergencyTel ? (
         <a
@@ -243,15 +438,6 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
         <span className="text-[10px] text-slate-400">
           Emergency number not configured — see lib/emergencyContacts.config.ts
         </span>
-      )}
-
-      {smsOutcome?.mode === "none" && typeof navigator !== "undefined" && "share" in navigator && lastRequest && (
-        <button
-          onClick={() => navigator.share({ title: "SOS Alert", text: lastRequest.message }).catch(() => {})}
-          className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500 hover:text-slate-700"
-        >
-          <Share2 className="h-3 w-3" /> Share SOS message again
-        </button>
       )}
     </div>
   );

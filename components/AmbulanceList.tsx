@@ -1,10 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Ambulance as AmbulanceIcon } from "lucide-react";
+import { Ambulance as AmbulanceIcon, MapPin } from "lucide-react";
 import { getAmbulances, DEMO_SYNC_TIME } from "@/lib/emergencyData";
 import type { AmbulanceStatus } from "@/lib/emergencyTypes";
 import { useScenario } from "@/lib/ScenarioContext";
+
+function mapsUrl(position: [number, number]): string {
+  return `https://www.google.com/maps/search/?api=1&query=${position[0]},${position[1]}`;
+}
 
 const STATUS_STYLE: Record<AmbulanceStatus, string> = {
   AVAILABLE: "border-emerald-300 bg-emerald-50 text-emerald-700",
@@ -49,13 +53,23 @@ export default function AmbulanceList() {
                 <div className="font-mono text-slate-700">{a.etaMinutes} min</div>
               </div>
             </div>
-            <button
-              disabled={a.status !== "AVAILABLE" || requested.has(a.id)}
-              onClick={() => setRequested((prev) => new Set(prev).add(a.id))}
-              className="mt-3 w-full rounded-lg bg-teal-600 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
-            >
-              {requested.has(a.id) ? "REQUEST SENT (DEMO)" : "REQUEST HELP"}
-            </button>
+            <div className="mt-3 flex gap-2">
+              <button
+                disabled={a.status !== "AVAILABLE" || requested.has(a.id)}
+                onClick={() => setRequested((prev) => new Set(prev).add(a.id))}
+                className="flex-1 rounded-lg bg-teal-600 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+              >
+                {requested.has(a.id) ? "REQUEST SENT (DEMO)" : "REQUEST HELP"}
+              </button>
+              <a
+                href={mapsUrl(a.position)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-1 rounded-lg border border-slate-300 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                <MapPin className="h-3.5 w-3.5" />
+              </a>
+            </div>
           </div>
         ))}
       </div>

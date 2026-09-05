@@ -89,6 +89,8 @@ export interface EmergencyContactConfig {
   category: string;
   number: string;
   label: string;
+  description?: string;
+  emoji?: string;
 }
 
 export type AlertType = "INFO" | "WATCH" | "WARNING" | "CRITICAL";

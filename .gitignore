@@ -42,3 +42,10 @@ next-env.d.ts
 
 # claude code local session state
 .claude/
+
+.env*
+
+# Vercel-installed agent skill docs (Neon integration) — tooling reference,
+# not app code
+.agents/
+skills-lock.json

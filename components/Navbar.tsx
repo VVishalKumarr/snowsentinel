@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Satellite } from "lucide-react";
+import { Satellite, UserCircle } from "lucide-react";
 import ConnectionIndicator from "./ConnectionIndicator";
+import LanguageSelector from "./LanguageSelector";
+import { useAuth } from "@/lib/AuthContext";
 
 const LINKS = [
   { href: "/", label: "Home" },
@@ -12,6 +14,7 @@ const LINKS = [
 
 export default function Navbar() {
   const pathname = usePathname();
+  const { user } = useAuth();
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-md">
@@ -49,7 +52,17 @@ export default function Navbar() {
           })}
         </nav>
 
-        <ConnectionIndicator />
+        <div className="flex items-center gap-2">
+          <LanguageSelector compact />
+          <ConnectionIndicator />
+          <Link
+            href={user ? "/profile" : "/login"}
+            className="flex items-center gap-1 rounded-full border border-slate-200 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+          >
+            <UserCircle className="h-4 w-4" />
+            <span className="hidden sm:inline">{user ? user.name : "Log in"}</span>
+          </Link>
+        </div>
       </div>
     </header>
   );
