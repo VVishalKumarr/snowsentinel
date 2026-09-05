@@ -49,11 +49,15 @@ API route for AI explanations, so it isn't a static export).
 
 ### Android
 
-The `android/` folder is a ready Android Studio project (already run once in
-this environment via `npx cap add android` + `npx cap sync`).
+The `android/` folder is a ready Android Studio project. A debug APK has
+already been built from it in this environment (JDK 21 + Android SDK
+Platform 35 / Build-Tools 35.0.0) and sent to you separately —
+`android/app/build/outputs/apk/debug/app-debug.apk`, package
+`com.binarybrains.snowsentinel`.
 
-To build a debug APK, you need a JDK and the Android SDK installed (this
-development environment did not have them, so no APK has been built here):
+To rebuild it yourself, you need **JDK 21** specifically (the Capacitor
+Android module requires source/target 21 — JDK 17 fails with
+`invalid source release: 21`) and the Android SDK:
 
 ```bash
 cd android
