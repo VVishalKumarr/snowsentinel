@@ -8,12 +8,14 @@ import {
   TriangleAlert,
   CircleDashed,
   Send,
+  Search,
   UserPlus,
   Check,
   X,
   Trash2,
   MapPin,
   PhoneCall,
+  Siren,
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { useLanguage } from "@/lib/i18n";
@@ -31,7 +33,7 @@ interface PendingRequest {
   connectionId: number;
   fromUserId: number;
   fromName: string;
-  fromCode: string;
+  fromUsername: string;
   relationship: string | null;
   createdAt: string;
 }
@@ -41,6 +43,14 @@ interface IncomingCheckIn {
   fromUserId: number;
   fromName: string;
   requestedAt: string;
+}
+
+interface IncomingSosAlert {
+  id: number;
+  senderId: number;
+  senderName: string;
+  location: { lat: number; lng: number } | null;
+  createdAt: string;
 }
 
 const STATUS_META: Record<
@@ -70,9 +80,13 @@ export default function FamilyNetworkPanel() {
   const [members, setMembers] = useState<FamilyMemberView[]>([]);
   const [pending, setPending] = useState<PendingRequest[]>([]);
   const [incomingCheckIns, setIncomingCheckIns] = useState<IncomingCheckIn[]>([]);
+  const [incomingSos, setIncomingSos] = useState<IncomingSosAlert[]>([]);
   const [loading, setLoading] = useState(true);
-  const [code, setCode] = useState("");
+
+  const [searchUsername, setSearchUsername] = useState("");
   const [relationship, setRelationship] = useState("");
+  const [searchResult, setSearchResult] = useState<{ name: string; username: string } | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
 
@@ -85,6 +99,7 @@ export default function FamilyNetworkPanel() {
       setMembers(data.members ?? []);
       setPending(data.pendingRequests ?? []);
       setIncomingCheckIns(data.incomingCheckIns ?? []);
+      setIncomingSos(data.incomingSosAlerts ?? []);
     } finally {
       setLoading(false);
     }
@@ -99,36 +114,48 @@ export default function FamilyNetworkPanel() {
   if (!user) {
     return (
       <div className="glass-panel rounded-2xl p-6 text-center">
-        <p className="mb-3 text-sm text-slate-600">
-          Log in to use the Family Safety Network — it needs an account so requests and check-ins can
-          sync across everyone's phones.
-        </p>
+        <p className="mb-3 text-sm text-slate-600">{t("familyLoginRequired")}</p>
         <Link
           href="/login"
           className="inline-block rounded-lg bg-teal-600 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-700"
         >
-          Log in / Sign up
+          {t("authLogin")}
         </Link>
       </div>
     );
   }
 
-  const handleSendRequest = async (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSearchError(null);
+    setSearchResult(null);
+    setFormSuccess(null);
+    const res = await authedFetch(`/api/family/search?username=${encodeURIComponent(searchUsername)}`);
+    const data = await res.json();
+    if (!data.found) {
+      setSearchError(t("familyUserNotFound"));
+      return;
+    }
+    setSearchResult({ name: data.name, username: data.username });
+  };
+
+  const handleSendRequest = async () => {
+    if (!searchResult) return;
     setFormError(null);
     setFormSuccess(null);
     const res = await authedFetch("/api/family/request", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ code, relationship }),
+      body: JSON.stringify({ username: searchResult.username, relationship }),
     });
     const data = await res.json();
     if (!res.ok) {
-      setFormError(data.error || "Could not send request");
+      setFormError(data.error || t("authUnableToCreate"));
       return;
     }
-    setFormSuccess(`Request sent to ${data.sentTo.name} (#${data.sentTo.uniqueCode})`);
-    setCode("");
+    setFormSuccess(`${t("familyRequestSent")}: @${data.sentTo.username}`);
+    setSearchResult(null);
+    setSearchUsername("");
     setRelationship("");
   };
 
@@ -185,6 +212,31 @@ export default function FamilyNetworkPanel() {
 
   return (
     <div className="space-y-4">
+      {incomingSos.length > 0 && (
+        <div className="rounded-2xl border border-red-300 bg-red-50 p-4">
+          <div className="flex items-center gap-2 text-sm font-bold text-red-800">
+            <Siren className="h-4 w-4" /> {t("sosAlertTitle")}
+          </div>
+          {incomingSos.slice(0, 3).map((a) => (
+            <div key={a.id} className="mt-2 flex flex-wrap items-center justify-between gap-2 text-sm text-red-700">
+              <span>
+                @{a.senderName} {t("sosMayNeedHelp")}
+              </span>
+              {a.location && (
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${a.location.lat},${a.location.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 rounded-md border border-red-300 bg-white px-2.5 py-1 text-xs font-semibold hover:bg-red-100"
+                >
+                  <MapPin className="h-3 w-3" /> {t("sosViewLocation")}
+                </a>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
       {needsHelpMembers.length > 0 && (
         <div className="rounded-2xl border border-red-300 bg-red-50 p-4">
           <div className="flex items-center gap-2 text-sm font-bold text-red-800">
@@ -204,12 +256,14 @@ export default function FamilyNetworkPanel() {
                     <MapPin className="h-3 w-3" /> {t("familyViewLocation")}
                   </a>
                 )}
-                <a
-                  href={`tel:${m.phoneNumber}`}
-                  className="flex items-center gap-1 rounded-md bg-red-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-red-700"
-                >
-                  <PhoneCall className="h-3 w-3" /> {t("familyContact")}
-                </a>
+                {m.phoneNumber && (
+                  <a
+                    href={`tel:${m.phoneNumber}`}
+                    className="flex items-center gap-1 rounded-md bg-red-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-red-700"
+                  >
+                    <PhoneCall className="h-3 w-3" /> {t("familyContact")}
+                  </a>
+                )}
               </div>
             </div>
           ))}
@@ -218,7 +272,7 @@ export default function FamilyNetworkPanel() {
 
       <div className="glass-panel rounded-2xl p-4 sm:p-5">
         <div className="mb-1 flex items-center justify-between">
-          <h2 className="text-sm font-semibold tracking-wide text-slate-800">{t("familySafetyTitle")}</h2>
+          <h2 className="text-sm font-semibold tracking-wide text-slate-800">{t("familySafetyNetwork")}</h2>
           <span className="text-[10px] text-slate-500">
             {members.length} {t("familyMembers")}
           </span>
@@ -230,8 +284,8 @@ export default function FamilyNetworkPanel() {
         </div>
 
         <div className="mb-4 rounded-xl border border-teal-200 bg-teal-50 p-3">
-          <div className="text-[10px] font-medium tracking-wide text-teal-700">{t("familyYourId")}</div>
-          <div className="font-mono text-lg font-bold text-teal-800">#{user.uniqueCode}</div>
+          <div className="text-[10px] font-medium tracking-wide text-teal-700">{t("authUsername")}</div>
+          <div className="font-mono text-lg font-bold text-teal-800">@{user.username}</div>
         </div>
 
         {incomingCheckIns.length > 0 && (
@@ -263,10 +317,11 @@ export default function FamilyNetworkPanel() {
         {pending.length > 0 && (
           <div className="mb-4 space-y-2">
             {pending.map((p) => (
-              <div key={p.connectionId} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3 text-xs">
-                <span>
-                  <strong>{p.fromName}</strong> (#{p.fromCode}) wants to add you as {p.relationship || "family"}
-                </span>
+              <div key={p.connectionId} className="rounded-lg border border-slate-200 bg-white p-3 text-xs">
+                <p className="mb-2 font-semibold text-slate-700">{t("familyNewRequestTitle")}</p>
+                <p className="mb-2 text-slate-600">
+                  @{p.fromUsername} {t("familyWantsToConnect")}
+                </p>
                 <div className="flex gap-2">
                   <button
                     onClick={() => respondToRequest(p.connectionId, "accept")}
@@ -299,7 +354,9 @@ export default function FamilyNetworkPanel() {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-sm font-semibold text-slate-800">{m.name}</div>
-                    <div className="text-[11px] text-slate-500">{m.relationship || "Family"}</div>
+                    <div className="text-[11px] text-slate-500">
+                      @{m.username} · {m.relationship || "Family"}
+                    </div>
                   </div>
                   <span className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${meta.className}`}>
                     <Icon className="h-3 w-3" /> {t(STATUS_LABEL_KEY[m.safetyStatus])}
@@ -330,27 +387,46 @@ export default function FamilyNetworkPanel() {
 
       <div className="glass-panel rounded-2xl p-4 sm:p-5">
         <h3 className="mb-3 text-sm font-semibold tracking-wide text-slate-800">{t("familyAddMember")}</h3>
-        <form onSubmit={handleSendRequest} className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <form onSubmit={handleSearch} className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <input
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, "").slice(0, 6))}
-            placeholder="#482731"
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-mono outline-none focus:border-teal-400"
-          />
-          <input
-            value={relationship}
-            onChange={(e) => setRelationship(e.target.value)}
-            placeholder="Relationship (e.g. Brother)"
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-400"
+            value={searchUsername}
+            onChange={(e) => {
+              setSearchUsername(e.target.value);
+              setSearchResult(null);
+            }}
+            placeholder={t("familySearchUsername")}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-400 sm:col-span-2"
           />
           <button
             type="submit"
-            disabled={code.length !== 6}
-            className="flex items-center justify-center gap-1.5 rounded-lg bg-teal-600 px-3 py-2 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50"
+            disabled={!searchUsername}
+            className="flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
           >
-            <UserPlus className="h-3.5 w-3.5" /> {t("familySendRequest")}
+            <Search className="h-3.5 w-3.5" /> {t("familySearchUser")}
           </button>
         </form>
+        {searchError && <p className="mt-2 text-xs text-red-600">{searchError}</p>}
+
+        {searchResult && (
+          <div className="mt-3 rounded-lg border border-teal-200 bg-teal-50 p-3">
+            <div className="text-xs text-slate-500">{t("familyName")}</div>
+            <div className="text-sm font-semibold text-slate-800">{searchResult.name}</div>
+            <div className="mt-1 text-xs text-slate-500">{t("familyUsername")}</div>
+            <div className="font-mono text-sm text-teal-700">@{searchResult.username}</div>
+            <input
+              value={relationship}
+              onChange={(e) => setRelationship(e.target.value)}
+              placeholder="Relationship (e.g. Brother)"
+              className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-400"
+            />
+            <button
+              onClick={handleSendRequest}
+              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-teal-600 py-2 text-xs font-semibold text-white hover:bg-teal-700"
+            >
+              <UserPlus className="h-3.5 w-3.5" /> {t("familySendFamilyRequest")}
+            </button>
+          </div>
+        )}
         {formError && <p className="mt-2 text-xs text-red-600">{formError}</p>}
         {formSuccess && <p className="mt-2 text-xs text-emerald-600">{formSuccess}</p>}
       </div>

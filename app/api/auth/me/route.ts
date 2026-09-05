@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserFromToken } from "@/lib/auth";
+import { getUserFromRequest } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
-  const token = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-  const user = await getUserFromToken(token);
+  const user = await getUserFromRequest(req);
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
@@ -11,7 +10,7 @@ export async function GET(req: NextRequest) {
     user: {
       id: user.id,
       name: user.name,
-      phoneNumber: user.phone_number,
+      username: user.username,
       uniqueCode: user.unique_code,
     },
   });

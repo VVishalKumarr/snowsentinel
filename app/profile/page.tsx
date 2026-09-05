@@ -2,48 +2,28 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { UserCircle, Users2, Globe, Phone, LogOut } from "lucide-react";
+import { UserCircle, Users2, Globe, AtSign, LogOut } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import AuthGuard from "@/components/AuthGuard";
 import LanguageSelector from "@/components/LanguageSelector";
 import { useAuth } from "@/lib/AuthContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { LANGUAGES, useLanguage } from "@/lib/i18n";
 
-function maskPhone(phone: string): string {
-  if (phone.length <= 4) return phone;
-  return phone.slice(0, -4).replace(/\d/g, "•") + phone.slice(-4);
-}
-
-export default function ProfilePage() {
-  const { user, logout, loading } = useAuth();
+function ProfileContent() {
+  const { user, logout } = useAuth();
   const { trustedContacts } = useAppState();
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const router = useRouter();
 
   const currentLangLabel = LANGUAGES.find((l) => l.code === language)?.label ?? "English";
 
   const handleLogout = async () => {
     await logout();
-    router.push("/");
+    router.push("/login");
   };
 
-  if (loading) return null;
-
-  if (!user) {
-    return (
-      <div className="flex min-h-screen flex-col">
-        <Navbar />
-        <div className="flex flex-1 items-center justify-center px-4">
-          <div className="glass-panel max-w-sm rounded-2xl p-6 text-center">
-            <p className="mb-3 text-sm text-slate-600">You&apos;re not logged in.</p>
-            <Link href="/login" className="inline-block rounded-lg bg-teal-600 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-700">
-              Log in / Sign up
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (!user) return null;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -55,25 +35,25 @@ export default function ProfilePage() {
               <UserCircle className="h-9 w-9 text-teal-700" strokeWidth={1.5} />
             </div>
             <h1 className="text-lg font-semibold text-slate-900">{user.name}</h1>
-            <span className="font-mono text-sm font-bold text-teal-700">#{user.uniqueCode}</span>
+            <span className="font-mono text-sm font-bold text-teal-700">@{user.username}</span>
           </div>
 
           <dl className="space-y-3 text-sm">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <dt className="flex items-center gap-1.5 text-slate-500">
-                <Phone className="h-3.5 w-3.5" /> Phone number
+                <AtSign className="h-3.5 w-3.5" /> {t("authUsername")}
               </dt>
-              <dd className="font-mono text-slate-700">{maskPhone(user.phoneNumber)}</dd>
+              <dd className="font-mono text-slate-700">@{user.username}</dd>
             </div>
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <dt className="flex items-center gap-1.5 text-slate-500">
-                <Users2 className="h-3.5 w-3.5" /> Trusted contacts (local, non-account)
+                <Users2 className="h-3.5 w-3.5" /> {t("emergencyContacts")}
               </dt>
               <dd className="text-slate-700">{trustedContacts.length}</dd>
             </div>
             <div className="flex items-center justify-between pb-1">
               <dt className="flex items-center gap-1.5 text-slate-500">
-                <Globe className="h-3.5 w-3.5" /> Language
+                <Globe className="h-3.5 w-3.5" /> {t("language")}
               </dt>
               <dd>
                 <LanguageSelector compact />
@@ -88,13 +68,13 @@ export default function ProfilePage() {
               href="/dashboard?tab=family"
               className="rounded-lg border border-slate-200 bg-white py-2 text-center text-xs font-semibold text-slate-700 hover:bg-slate-50"
             >
-              MANAGE FAMILY
+              {t("manageFamily")}
             </Link>
             <Link
               href="/dashboard?tab=emergency"
               className="rounded-lg border border-slate-200 bg-white py-2 text-center text-xs font-semibold text-slate-700 hover:bg-slate-50"
             >
-              EMERGENCY CONTACTS
+              {t("emergencyContacts").toUpperCase()}
             </Link>
           </div>
 
@@ -102,16 +82,24 @@ export default function ProfilePage() {
             onClick={handleLogout}
             className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-100"
           >
-            <LogOut className="h-3.5 w-3.5" /> LOG OUT
+            <LogOut className="h-3.5 w-3.5" /> {t("logOut")}
           </button>
         </div>
 
         <p className="mt-4 text-center text-[11px] text-slate-400">
-          Your account only stores your name, phone number, and family connections you explicitly
-          approve. See the Trust &amp; Limitations section in the Emergency tab for what this prototype
-          does and doesn&apos;t do.
+          Your account only stores your name, username, and family connections you explicitly approve.
+          Your password is never stored in plain text. See the Trust &amp; Limitations section in the
+          Emergency tab for what this prototype does and doesn&apos;t do.
         </p>
       </main>
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <AuthGuard>
+      <ProfileContent />
+    </AuthGuard>
   );
 }

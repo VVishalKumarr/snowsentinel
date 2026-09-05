@@ -8,6 +8,7 @@ import {
   Clock,
   XCircle,
   MapPin,
+  Users2,
   MessageCircle,
   MessageSquareText,
   Share2,
@@ -24,10 +25,13 @@ interface Recipient {
   id: string;
   name: string;
   phoneNumber?: string;
+  // Only set for real, logged-in family-network connections — lets the
+  // Family Network share channel notify them through the app itself.
+  userId?: number;
 }
 
 type FlowStep = "idle" | "locating" | "confirm" | "result";
-type ShareChannel = "whatsapp" | "sms" | "instagram" | "facebook" | "other";
+type ShareChannel = "family" | "whatsapp" | "sms" | "other";
 type ResultStatus = "SHARED" | "QUEUED" | "CANCELLED";
 
 function getLocation(): Promise<{ lat: number; lng: number } | null> {
@@ -92,10 +96,11 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
           const data = await res.json();
           if (!cancelled) {
             const list: Recipient[] = (data.members ?? []).map(
-              (m: { userId: number; name: string; phoneNumber: string }) => ({
+              (m: { userId: number; name: string; phoneNumber: string | null }) => ({
                 id: String(m.userId),
                 name: m.name,
-                phoneNumber: m.phoneNumber,
+                phoneNumber: m.phoneNumber ?? undefined,
+                userId: m.userId,
               })
             );
             setRecipients(list);
@@ -173,6 +178,7 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
     const message = buildMessage(location);
     const chosen = recipients.filter((r) => selected.has(r.id));
     const numbers = chosen.map((r) => cleanPhoneNumber(r.phoneNumber ?? "")).filter((n): n is string => !!n);
+    const recipientUserIds = chosen.map((r) => r.userId).filter((id): id is number => typeof id === "number");
 
     const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
 
@@ -193,6 +199,20 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
     }
 
     try {
+      if (channel === "family") {
+        if (!user || recipientUserIds.length === 0) {
+          finish("CANCELLED", channel);
+          return;
+        }
+        const res = await authedFetch("/api/sos/family", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ recipientUserIds, message, lat: location?.lat, lng: location?.lng }),
+        });
+        finish(res.ok ? "SHARED" : "CANCELLED", channel);
+        return;
+      }
+
       if (channel === "whatsapp") {
         const url =
           numbers.length === 1
@@ -219,10 +239,10 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
         }
       }
 
-      // Instagram/Facebook cannot receive a pre-filled private message from
-      // a website — that's a real platform restriction, not a bug. The most
-      // honest option is the OS share sheet (which lists those apps if
-      // installed and able to accept shared text) with a clear fallback.
+      // "Share" — generic OS share sheet (Instagram/Facebook/Messages/etc.
+      // appear here if installed and able to accept shared text; a website
+      // cannot pre-fill a private message in those apps directly, which is
+      // a real platform restriction, not a bug).
       const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
       if (canShare) {
         try {
@@ -257,7 +277,7 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
     return (
       <div className="flex flex-col items-center gap-3 py-6">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-red-200 border-t-red-600" />
-        <p className="text-xs text-slate-500">Getting your location…</p>
+        <p className="text-xs text-slate-500">{t("sosGettingLocation")}</p>
       </div>
     );
   }
@@ -267,15 +287,13 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
       <div className="w-full max-w-sm space-y-4">
         <div className="text-center">
           <div className="text-lg font-bold text-red-600">🚨 {t("sos")}</div>
-          <p className="mt-1 text-xs text-slate-600">
-            Your current location will be shared with your selected emergency contacts.
-          </p>
+          <p className="mt-1 text-xs text-slate-600">{t("sosConfirmDescription")}</p>
         </div>
 
         <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs">
           <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-slate-500" />
           <span className="font-mono text-slate-700">
-            {location ? `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}` : "Location unavailable"}
+            {location ? `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}` : t("sosLocationUnavailable")}
           </span>
         </div>
 
@@ -302,6 +320,13 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
           <div className="mb-1.5 text-[11px] font-medium text-slate-500">{t("sosShareVia")}</div>
           <div className="grid grid-cols-2 gap-2">
             <button
+              onClick={() => shareVia("family")}
+              disabled={!user}
+              className="flex items-center justify-center gap-1.5 rounded-lg bg-slate-800 py-2 text-xs font-semibold text-white hover:bg-slate-900 disabled:opacity-40"
+            >
+              <Users2 className="h-3.5 w-3.5" /> {t("sosShareFamilyNetwork")}
+            </button>
+            <button
               onClick={() => shareVia("whatsapp")}
               className="flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
             >
@@ -314,28 +339,19 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
               <MessageSquareText className="h-3.5 w-3.5" /> {t("sosShareSms")}
             </button>
             <button
-              onClick={() => shareVia("instagram")}
+              onClick={() => shareVia("other")}
               className="flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
             >
-              <span aria-hidden>📷</span> {t("sosShareInstagram")}
-            </button>
-            <button
-              onClick={() => shareVia("facebook")}
-              className="flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              <span aria-hidden>👤</span> {t("sosShareFacebook")}
+              <Share2 className="h-3.5 w-3.5" /> {t("sosShareOther")}
             </button>
           </div>
-          <button
-            onClick={() => shareVia("other")}
-            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            <Share2 className="h-3.5 w-3.5" /> {t("sosShareOther")}
-          </button>
+          {!user && (
+            <p className="mt-1.5 text-[10px] text-slate-400">{t("sosLogInForFamily")}</p>
+          )}
         </div>
 
         <button onClick={reset} className="w-full text-center text-xs text-slate-400 hover:text-slate-600">
-          Cancel
+          {t("sosCancel")}
         </button>
       </div>
     );
@@ -357,12 +373,12 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
           {result.status === "SHARED" && <CheckCircle2 className="h-4 w-4" />}
           {result.status === "QUEUED" && <Clock className="h-4 w-4" />}
           {result.status === "CANCELLED" && <XCircle className="h-4 w-4" />}
-          {result.status === "SHARED" && t("sosShared")}
-          {result.status === "QUEUED" && `${t("sosQueued")} (OFFLINE)`}
+          {result.status === "SHARED" && (result.channel === "family" ? t("sosSentToFamily") : t("sosShared"))}
+          {result.status === "QUEUED" && `${t("sosQueued")}`}
           {result.status === "CANCELLED" && t("sosSharingCancelled")}
         </div>
         {result.status === "QUEUED" && (
-          <p className="text-xs text-slate-500">Saved on this device. No message has left this phone yet.</p>
+          <p className="text-xs text-slate-500">{t("sosQueuedNote")}</p>
         )}
         <pre className="whitespace-pre-wrap rounded-lg border border-slate-200 bg-slate-50 p-3 text-left font-sans text-[11px] text-slate-600">
           {message}
@@ -372,14 +388,14 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
             href={emergencyTel}
             className="flex items-center justify-center gap-2 rounded-lg border border-red-300 bg-white px-4 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"
           >
-            <PhoneCall className="h-3.5 w-3.5" /> Call Emergency Services
+            <PhoneCall className="h-3.5 w-3.5" /> {t("call")}
           </a>
         )}
         <button
           onClick={reset}
           className="w-full rounded-lg border border-slate-300 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
         >
-          Done
+          {t("commonDone")}
         </button>
       </div>
     );
@@ -432,12 +448,10 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
           href={emergencyTel}
           className="flex items-center gap-2 rounded-lg border border-red-300 bg-white px-4 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"
         >
-          <PhoneCall className="h-3.5 w-3.5" /> Call Emergency Services
+          <PhoneCall className="h-3.5 w-3.5" /> {t("call")}
         </a>
       ) : (
-        <span className="text-[10px] text-slate-400">
-          Emergency number not configured — see lib/emergencyContacts.config.ts
-        </span>
+        <span className="text-[10px] text-slate-400">{t("emergencyNotConfigured")}</span>
       )}
     </div>
   );

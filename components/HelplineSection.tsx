@@ -1,15 +1,19 @@
+"use client";
+
 import { PhoneCall, Siren, Info } from "lucide-react";
 import { emergencyContacts, telHref } from "@/lib/emergencyContacts.config";
+import { useLanguage } from "@/lib/i18n";
 
 export default function HelplineSection() {
+  const { t } = useLanguage();
   const primary = emergencyContacts.find((c) => c.category === "Emergency");
   const rest = emergencyContacts.filter((c) => c.category !== "Emergency");
 
   return (
     <div className="glass-panel rounded-2xl p-4 sm:p-5">
-      <h2 className="mb-1 text-sm font-semibold tracking-wide text-slate-800">EMERGENCY HELPLINE</h2>
+      <h2 className="mb-1 text-sm font-semibold tracking-wide text-slate-800">{t("helplineTitle")}</h2>
       <p className="mb-4 text-xs text-slate-500">
-        Numbers below are read from a local configuration file — see{" "}
+        {t("helplineDescription")}{" "}
         <code className="rounded bg-slate-100 px-1 py-0.5">lib/emergencyContacts.config.ts</code>.
       </p>
 
@@ -28,7 +32,7 @@ export default function HelplineSection() {
             {primary.number && <span className="font-mono text-red-600">{primary.number}</span>}
           </span>
           <span className="rounded-lg bg-red-600 px-4 py-2 text-xs font-bold tracking-wide text-white">
-            {telHref(primary.number) ? "CALL" : "NOT CONFIGURED"}
+            {telHref(primary.number) ? t("call") : "NOT CONFIGURED"}
           </span>
         </a>
       )}
@@ -54,7 +58,7 @@ export default function HelplineSection() {
                   href={href}
                   className="flex flex-shrink-0 items-center gap-1.5 rounded-md bg-teal-600 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-teal-700"
                 >
-                  <PhoneCall className="h-3 w-3" /> CALL
+                  <PhoneCall className="h-3 w-3" /> {t("call")}
                 </a>
               ) : (
                 <span className="flex-shrink-0 rounded-md border border-slate-200 px-3 py-1.5 text-[11px] text-slate-400">
@@ -68,12 +72,7 @@ export default function HelplineSection() {
 
       <div className="mt-4 flex items-start gap-1.5 rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-[10px] text-slate-500">
         <Info className="mt-0.5 h-3 w-3 flex-shrink-0" />
-        <span>
-          Source / verification: national numbers configured here (112, 101, 108, 102, 1078, 181, 1930,
-          1098) are drawn from India's Emergency Response Support System and NDMA public information —
-          verify current, state-specific routing with local authorities before relying on this in a real
-          deployment. Not every number works identically in every state.
-        </span>
+        <span>{t("helplineSourceNote")}</span>
       </div>
     </div>
   );

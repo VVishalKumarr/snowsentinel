@@ -5,6 +5,7 @@ import type { HazardScenario } from "@/lib/types";
 import type { AlertType } from "@/lib/emergencyTypes";
 import { buildAlertForScenario } from "@/lib/emergencyData";
 import { useAppState } from "@/lib/AppStateContext";
+import { useLanguage } from "@/lib/i18n";
 
 const TYPE_META: Record<AlertType, { icon: typeof Info; className: string }> = {
   INFO: { icon: Info, className: "border-slate-300 bg-slate-50 text-slate-700" },
@@ -15,6 +16,7 @@ const TYPE_META: Record<AlertType, { icon: typeof Info; className: string }> = {
 
 export default function AlertCenter({ scenario }: { scenario: HazardScenario }) {
   const { acknowledgedAlertIds, acknowledgeAlert } = useAppState();
+  const { t } = useLanguage();
   const alert = buildAlertForScenario(scenario);
   const meta = TYPE_META[alert.type];
   const Icon = meta.icon;
@@ -31,26 +33,26 @@ export default function AlertCenter({ scenario }: { scenario: HazardScenario }) 
         </div>
         {acknowledged ? (
           <span className="flex items-center gap-1 rounded-full bg-white px-2.5 py-0.5 text-[10px] font-semibold">
-            <CheckCircle2 className="h-3 w-3" /> ACKNOWLEDGED
+            <CheckCircle2 className="h-3 w-3" /> {t("alertAcknowledged")}
           </span>
         ) : (
           <button
             onClick={() => acknowledgeAlert(alert.id)}
             className="rounded-full bg-white px-3 py-1 text-[10px] font-semibold shadow-sm hover:shadow"
           >
-            ACKNOWLEDGE
+            {t("alertAcknowledge")}
           </button>
         )}
       </div>
 
       <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-xs sm:grid-cols-2">
-        <Field label="WHAT" value={alert.what} />
-        <Field label="WHERE" value={alert.where} />
-        <Field label="WHY" value={alert.why} />
-        <Field label="IMPACT" value={alert.impact} />
-        <Field label="ACTION" value={alert.action} />
-        <Field label="SOURCE" value={alert.source} />
-        <Field label="CONFIDENCE" value={alert.confidence} />
+        <Field label={t("alertWhat")} value={alert.what} />
+        <Field label={t("alertWhere")} value={alert.where} />
+        <Field label={t("alertWhy")} value={alert.why} />
+        <Field label={t("alertImpact")} value={alert.impact} />
+        <Field label={t("alertAction")} value={alert.action} />
+        <Field label={t("alertSource")} value={alert.source} />
+        <Field label={t("alertConfidence")} value={alert.confidence} />
       </dl>
     </div>
   );

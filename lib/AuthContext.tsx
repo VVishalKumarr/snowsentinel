@@ -1,25 +1,32 @@
 "use client";
 
-// AuthContext.tsx — client-side session state for the phone+OTP login flow.
-// The token is an opaque server-issued session id (see lib/auth.ts), stored
-// in localStorage so it survives reloads. OTP delivery itself is DEMO MODE
-// (no SMS provider configured) — see app/api/auth/request-otp/route.ts.
+// AuthContext.tsx — client-side session state for the username + password
+// login flow. The server also sets an httpOnly session cookie (used by
+// middleware.ts for page-level route protection); this context separately
+// keeps the token in memory + localStorage so existing API calls can keep
+// using an Authorization header (see authedFetch), and so the UI knows
+// "am I logged in" instantly without waiting on a cookie-only round trip.
+// No password ever passes through localStorage — only the opaque session
+// token, which the server can revoke at any time via logout.
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 
 export interface AuthUser {
   id: number;
   name: string;
-  phoneNumber: string;
-  uniqueCode: string;
+  username: string;
+  uniqueCode: string | null;
 }
+
+export type AuthStatus = "checking" | "authenticated" | "unauthenticated";
 
 interface AuthContextValue {
   user: AuthUser | null;
   token: string | null;
+  status: AuthStatus;
   loading: boolean;
-  requestOtp: (phone: string) => Promise<{ demoMode: boolean; otp?: string }>;
-  verifyOtp: (phone: string, otp: string, name?: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
+  register: (name: string, username: string, password: string, confirmPassword: string) => Promise<void>;
   logout: () => Promise<void>;
   authedFetch: (input: string, init?: RequestInit) => Promise<Response>;
 }
@@ -31,26 +38,64 @@ const USER_KEY = "snowsentinel:authUser";
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<AuthStatus>("checking");
 
+  const authedFetch = useCallback(
+    (input: string, init: RequestInit = {}) => {
+      const headers = new Headers(init.headers);
+      if (token) headers.set("authorization", `Bearer ${token}`);
+      return fetch(input, { ...init, headers, credentials: "include" });
+    },
+    [token]
+  );
+
+  // On mount: trust a locally-cached token only provisionally, then confirm
+  // with the server (handles logout-elsewhere, expiry, or a forged value).
   useEffect(() => {
-    try {
-      const storedToken = window.localStorage.getItem(TOKEN_KEY);
-      const storedUser = window.localStorage.getItem(USER_KEY);
-      if (storedToken && storedUser) {
-        setToken(storedToken);
-        setUser(JSON.parse(storedUser));
+    let cancelled = false;
+    async function checkSession() {
+      let storedToken: string | null = null;
+      try {
+        storedToken = window.localStorage.getItem(TOKEN_KEY);
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false);
+      if (!storedToken) {
+        if (!cancelled) setStatus("unauthenticated");
+        return;
+      }
+      try {
+        const res = await fetch("/api/auth/me", {
+          headers: { authorization: `Bearer ${storedToken}` },
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("invalid session");
+        const data = await res.json();
+        if (!cancelled) {
+          setToken(storedToken);
+          setUser(data.user);
+          setStatus("authenticated");
+        }
+      } catch {
+        try {
+          window.localStorage.removeItem(TOKEN_KEY);
+          window.localStorage.removeItem(USER_KEY);
+        } catch {
+          // ignore
+        }
+        if (!cancelled) setStatus("unauthenticated");
+      }
     }
+    checkSession();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const persist = useCallback((nextToken: string, nextUser: AuthUser) => {
     setToken(nextToken);
     setUser(nextUser);
+    setStatus("authenticated");
     try {
       window.localStorage.setItem(TOKEN_KEY, nextToken);
       window.localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
@@ -59,40 +104,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const requestOtp = useCallback(async (phone: string) => {
-    const res = await fetch("/api/auth/request-otp", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ phone }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Could not send code");
-    return { demoMode: !!data.demoMode, otp: data.otp };
-  }, []);
-
-  const verifyOtp = useCallback(
-    async (phone: string, otp: string, name?: string) => {
-      const res = await fetch("/api/auth/verify-otp", {
+  const login = useCallback(
+    async (username: string, password: string) => {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ phone, otp, name }),
+        credentials: "include",
+        body: JSON.stringify({ username, password }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Verification failed");
+      if (!res.ok) throw new Error(data.error || "Invalid username or password.");
+      persist(data.token, data.user);
+    },
+    [persist]
+  );
+
+  const register = useCallback(
+    async (name: string, username: string, password: string, confirmPassword: string) => {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name, username, password, confirmPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Unable to create account.");
       persist(data.token, data.user);
     },
     [persist]
   );
 
   const logout = useCallback(async () => {
-    if (token) {
-      fetch("/api/auth/logout", {
-        method: "POST",
-        headers: { authorization: `Bearer ${token}` },
-      }).catch(() => {});
-    }
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      headers: token ? { authorization: `Bearer ${token}` } : undefined,
+      credentials: "include",
+    }).catch(() => {});
     setToken(null);
     setUser(null);
+    setStatus("unauthenticated");
     try {
       window.localStorage.removeItem(TOKEN_KEY);
       window.localStorage.removeItem(USER_KEY);
@@ -101,18 +151,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [token]);
 
-  const authedFetch = useCallback(
-    (input: string, init: RequestInit = {}) => {
-      const headers = new Headers(init.headers);
-      if (token) headers.set("authorization", `Bearer ${token}`);
-      return fetch(input, { ...init, headers });
-    },
-    [token]
-  );
-
   const value = useMemo<AuthContextValue>(
-    () => ({ user, token, loading, requestOtp, verifyOtp, logout, authedFetch }),
-    [user, token, loading, requestOtp, verifyOtp, logout, authedFetch]
+    () => ({
+      user,
+      token,
+      status,
+      loading: status === "checking",
+      login,
+      register,
+      logout,
+      authedFetch,
+    }),
+    [user, token, status, login, register, logout, authedFetch]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { MapPin, Siren, Satellite as SatelliteIcon, ShieldHalf, LifeBuoy, Home, Users2, PhoneCall } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import AuthGuard from "@/components/AuthGuard";
 import ConnectionIndicator from "@/components/ConnectionIndicator";
 import StatCard from "@/components/StatCard";
 import RiskIndicator from "@/components/RiskIndicator";
@@ -206,8 +207,10 @@ function DashboardInner() {
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-sm text-slate-500">Loading dashboard…</div>}>
-      <DashboardInner />
-    </Suspense>
+    <AuthGuard>
+      <Suspense fallback={<div className="p-8 text-sm text-slate-500">Loading dashboard…</div>}>
+        <DashboardInner />
+      </Suspense>
+    </AuthGuard>
   );
 }

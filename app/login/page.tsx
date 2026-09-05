@@ -2,60 +2,65 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Satellite, ShieldCheck } from "lucide-react";
+import { Satellite } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { useLanguage } from "@/lib/i18n";
 
-type Step = "phone" | "otp";
+type Mode = "login" | "register";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { requestOtp, verifyOtp } = useAuth();
+  const { login, register } = useAuth();
   const { t } = useLanguage();
 
-  const [step, setStep] = useState<Step>("phone");
-  const [phone, setPhone] = useState("");
+  const [mode, setMode] = useState<Mode>("login");
   const [name, setName] = useState("");
-  const [otp, setOtp] = useState("");
-  const [demoOtp, setDemoOtp] = useState<string | null>(null);
-  const [isNewUser, setIsNewUser] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSendOtp = async (e: React.FormEvent) => {
+  const resetFields = () => {
+    setName("");
+    setUsername("");
+    setPassword("");
+    setConfirmPassword("");
+    setError(null);
+  };
+
+  const switchMode = (next: Mode) => {
+    setMode(next);
+    resetFields();
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (phone.replace(/[^\d]/g, "").length < 7) {
-      setError("Enter a valid phone number");
-      return;
-    }
     setLoading(true);
     try {
-      const result = await requestOtp(phone);
-      setDemoOtp(result.demoMode ? result.otp ?? null : null);
-      setStep("otp");
+      await login(username, password);
+      router.push("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not send code");
+      setError(err instanceof Error ? err.message : t("authInvalidCredentials"));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleVerify = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (password !== confirmPassword) {
+      setError(t("authPasswordMismatch"));
+      return;
+    }
     setLoading(true);
     try {
-      await verifyOtp(phone, otp, name || undefined);
+      await register(name, username, password, confirmPassword);
       router.push("/dashboard");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Verification failed";
-      if (/name is required/i.test(message)) {
-        setIsNewUser(true);
-        setError("Looks like you're new here — enter your name below too.");
-      } else {
-        setError(message);
-      }
+      setError(err instanceof Error ? err.message : t("authUnableToCreate"));
     } finally {
       setLoading(false);
     }
@@ -64,91 +69,119 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-sm">
-        <div className="mb-6 flex flex-col items-center gap-2">
+        <div className="mb-6 flex flex-col items-center gap-2 text-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-teal-50 border border-teal-200">
             <Satellite className="h-6 w-6 text-teal-700" strokeWidth={1.75} />
           </div>
-          <h1 className="text-lg font-semibold tracking-wide text-slate-900">{t("loginTitle")}</h1>
+          <h1 className="text-lg font-semibold tracking-[0.14em] text-slate-900">{t("appName").toUpperCase()}</h1>
+          <p className="text-sm text-slate-500">{t("authTagline")}</p>
         </div>
 
         <div className="glass-panel rounded-2xl p-6">
-          {step === "phone" && (
-            <form onSubmit={handleSendOtp} className="space-y-4">
+          {mode === "login" ? (
+            <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500">{t("loginPhone")}</label>
+                <label className="mb-1 block text-xs font-medium text-slate-500">{t("authUsername")}</label>
                 <input
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+91 XXXXX XXXXX"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  autoComplete="username"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-400"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-500">{t("authPassword")}</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-400"
                 />
               </div>
               {error && <p className="text-xs text-red-600">{error}</p>}
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !username || !password}
                 className="w-full rounded-lg bg-teal-600 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-60"
               >
-                {loading ? "…" : t("loginSendOtp")}
+                {loading ? t("authLoggingIn") : t("authLogin")}
               </button>
+              <p className="text-center text-xs text-slate-500">
+                {t("authDontHaveAccount")}{" "}
+                <button
+                  type="button"
+                  onClick={() => switchMode("register")}
+                  className="font-semibold text-teal-700 hover:underline"
+                >
+                  {t("authCreateNewAccount")}
+                </button>
+              </p>
             </form>
-          )}
-
-          {step === "otp" && (
-            <form onSubmit={handleVerify} className="space-y-4">
-              {demoOtp && (
-                <div className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                  <ShieldCheck className="h-3.5 w-3.5 flex-shrink-0" />
-                  <span>
-                    <strong>{t("loginDemoAuth")}</strong> — no SMS provider configured. Your code:{" "}
-                    <span className="font-mono font-bold">{demoOtp}</span>
-                  </span>
-                </div>
-              )}
-
-              {isNewUser && (
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-500">{t("loginName")}</label>
-                  <input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Vishal"
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-400"
-                  />
-                </div>
-              )}
-
+          ) : (
+            <form onSubmit={handleRegister} className="space-y-4">
+              <h2 className="text-center text-sm font-semibold tracking-wide text-slate-800">
+                {t("authCreateYourAccount")}
+              </h2>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500">{t("loginOtp")}</label>
+                <label className="mb-1 block text-xs font-medium text-slate-500">{t("authFullName")}</label>
                 <input
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/[^\d]/g, "").slice(0, 6))}
-                  placeholder="123456"
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-center font-mono text-lg tracking-[0.3em] outline-none focus:border-teal-400"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-400"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-500">{t("authUsername")}</label>
+                <input
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  autoComplete="username"
+                  placeholder="vishal123"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-400"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-500">{t("authPassword")}</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="new-password"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-400"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-500">{t("authConfirmPassword")}</label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  autoComplete="new-password"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-400"
                 />
               </div>
               {error && <p className="text-xs text-red-600">{error}</p>}
               <button
                 type="submit"
-                disabled={loading || otp.length !== 6}
+                disabled={loading || !name || !username || !password || !confirmPassword}
                 className="w-full rounded-lg bg-teal-600 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-60"
               >
-                {loading ? "…" : t("loginVerify")}
+                {loading ? t("authCreatingAccount") : t("authCreateAccount")}
               </button>
-              <button
-                type="button"
-                onClick={() => setStep("phone")}
-                className="w-full text-center text-xs text-slate-400 hover:text-slate-600"
-              >
-                Use a different number
-              </button>
+              <p className="text-center text-xs text-slate-500">
+                {t("authAlreadyHaveAccount")}{" "}
+                <button
+                  type="button"
+                  onClick={() => switchMode("login")}
+                  className="font-semibold text-teal-700 hover:underline"
+                >
+                  {t("authBackToLogin")}
+                </button>
+              </p>
             </form>
           )}
         </div>
-
-        <p className="mt-4 text-center text-[11px] text-slate-400">
-          Hackathon prototype — demo authentication only, no real SMS is sent.
-        </p>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserFromRequest } from "@/lib/auth";
+import { getUserFromRequest, normalizeUsername } from "@/lib/auth";
 import { sendFamilyRequest, UserFacingError } from "@/lib/family";
 
 export async function POST(req: NextRequest) {
@@ -7,15 +7,15 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));
-  const code = String(body.code ?? "").replace(/[^0-9]/g, "");
+  const username = normalizeUsername(body.username ?? "");
   const relationship = String(body.relationship ?? "").slice(0, 60);
 
-  if (code.length !== 6) {
-    return NextResponse.json({ error: "Enter a valid 6-digit SnowSentinel ID" }, { status: 400 });
+  if (!username) {
+    return NextResponse.json({ error: "Enter a username" }, { status: 400 });
   }
 
   try {
-    const target = await sendFamilyRequest(user.id, code, relationship);
+    const target = await sendFamilyRequest(user.id, username, relationship);
     return NextResponse.json({ success: true, sentTo: target });
   } catch (e) {
     if (e instanceof UserFacingError) {
