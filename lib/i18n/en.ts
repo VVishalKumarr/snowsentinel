@@ -147,6 +147,12 @@ const en = {
   authUsernameTaken: "This username is already in use. Please choose another.",
   authPasswordMismatch: "Passwords do not match.",
   authLoggedIn: "Logged in.",
+  authNameRequired: "Full name is required.",
+  authUsernameRequired: "Enter a username.",
+  authUsernameTooShort: "Username must be at least 3 characters (letters, numbers, underscore, dot).",
+  authPasswordTooShort: "Password must be at least 6 characters.",
+  authMissingCredentials: "Username and password are required.",
+  authSomethingWentWrong: "Something went wrong. Please try again.",
 
   alertWhat: "WHAT",
   alertWhere: "WHERE",

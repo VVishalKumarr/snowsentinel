@@ -147,6 +147,12 @@ const hi: Record<TranslationKey, string> = {
   authUsernameTaken: "यह उपयोगकर्ता नाम पहले से उपयोग में है। कृपया दूसरा चुनें।",
   authPasswordMismatch: "पासवर्ड मेल नहीं खाते।",
   authLoggedIn: "लॉग इन हो गया।",
+  authNameRequired: "पूरा नाम आवश्यक है।",
+  authUsernameRequired: "उपयोगकर्ता नाम दर्ज करें।",
+  authUsernameTooShort: "उपयोगकर्ता नाम कम से कम 3 अक्षर का होना चाहिए (अक्षर, अंक, अंडरस्कोर, डॉट)।",
+  authPasswordTooShort: "पासवर्ड कम से कम 6 अक्षर का होना चाहिए।",
+  authMissingCredentials: "उपयोगकर्ता नाम और पासवर्ड आवश्यक हैं।",
+  authSomethingWentWrong: "कुछ गलत हो गया। कृपया पुनः प्रयास करें।",
 
   alertWhat: "क्या",
   alertWhere: "कहाँ",

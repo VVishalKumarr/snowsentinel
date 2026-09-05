@@ -1,25 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyPassword, createSession, normalizeUsername, SESSION_COOKIE_NAME, SESSION_TTL_SECONDS } from "@/lib/auth";
 import { findUserByUsername } from "@/lib/db";
+import type { AuthErrorCode } from "@/lib/authErrors";
+
+function fail(code: AuthErrorCode, error: string, status: number) {
+  return NextResponse.json({ error, code }, { status });
+}
 
 export async function POST(req: NextRequest) {
   let body: { username?: string; password?: string };
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    return fail("INVALID_BODY", "Invalid request body", 400);
   }
 
   const username = normalizeUsername(body.username ?? "");
   const password = body.password ?? "";
 
   if (!username || !password) {
-    return NextResponse.json({ error: "Username and password are required" }, { status: 400 });
+    return fail("MISSING_CREDENTIALS", "Username and password are required", 400);
   }
 
   const user = await findUserByUsername(username);
   if (!user || !user.password_hash || !verifyPassword(password, user.password_hash)) {
-    return NextResponse.json({ error: "Invalid username or password." }, { status: 401 });
+    return fail("INVALID_CREDENTIALS", "Invalid username or password.", 401);
   }
 
   const token = await createSession(user.id);

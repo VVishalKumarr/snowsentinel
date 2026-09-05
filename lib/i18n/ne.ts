@@ -147,6 +147,12 @@ const ne: Record<TranslationKey, string> = {
   authUsernameTaken: "यो प्रयोगकर्ता नाम पहिले नै प्रयोगमा छ। कृपया अर्को छान्नुहोस्।",
   authPasswordMismatch: "पासवर्डहरू मेल खाँदैनन्।",
   authLoggedIn: "लग इन भयो।",
+  authNameRequired: "पूरा नाम आवश्यक छ।",
+  authUsernameRequired: "प्रयोगकर्ता नाम हाल्नुहोस्।",
+  authUsernameTooShort: "प्रयोगकर्ता नाम कम्तिमा ३ अक्षरको हुनुपर्छ (अक्षर, अंक, अन्डरस्कोर, डट)।",
+  authPasswordTooShort: "पासवर्ड कम्तिमा ६ अक्षरको हुनुपर्छ।",
+  authMissingCredentials: "प्रयोगकर्ता नाम र पासवर्ड आवश्यक छ।",
+  authSomethingWentWrong: "केही गडबड भयो। कृपया फेरि प्रयास गर्नुहोस्।",
 
   alertWhat: "के",
   alertWhere: "कहाँ",

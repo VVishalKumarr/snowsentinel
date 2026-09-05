@@ -2,7 +2,7 @@
 
 // AuthContext.tsx — client-side session state for the username + password
 // login flow. The server also sets an httpOnly session cookie (used by
-// middleware.ts for page-level route protection); this context separately
+// proxy.ts for page-level route protection); this context separately
 // keeps the token in memory + localStorage so existing API calls can keep
 // using an Authorization header (see authedFetch), and so the UI knows
 // "am I logged in" instantly without waiting on a cookie-only round trip.
@@ -10,6 +10,7 @@
 // token, which the server can revoke at any time via logout.
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
+import { AuthApiError, type AuthErrorCode } from "./authErrors";
 
 export interface AuthUser {
   id: number;
@@ -113,7 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ username, password }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Invalid username or password.");
+      if (!res.ok) throw new AuthApiError((data.code as AuthErrorCode) || "UNKNOWN", data.error || "Login failed");
       persist(data.token, data.user);
     },
     [persist]
@@ -128,7 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ name, username, password, confirmPassword }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Unable to create account.");
+      if (!res.ok) throw new AuthApiError((data.code as AuthErrorCode) || "UNKNOWN", data.error || "Registration failed");
       persist(data.token, data.user);
     },
     [persist]

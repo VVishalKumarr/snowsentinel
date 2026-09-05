@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Satellite } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { useLanguage } from "@/lib/i18n";
+import { AuthApiError, AUTH_ERROR_KEY } from "@/lib/authErrors";
+import LanguageSelector from "@/components/LanguageSelector";
 
 type Mode = "login" | "register";
 
@@ -20,6 +22,14 @@ export default function LoginPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Server errors carry a stable code (see lib/authErrors.ts) so the
+  // message shown always comes from the current language's dictionary,
+  // never the server's raw English string.
+  const describeError = (err: unknown, fallback: keyof typeof AUTH_ERROR_KEY = "UNKNOWN") => {
+    const code = err instanceof AuthApiError ? err.code : fallback;
+    return t(AUTH_ERROR_KEY[code]);
+  };
 
   const resetFields = () => {
     setName("");
@@ -42,7 +52,7 @@ export default function LoginPage() {
       await login(username, password);
       router.push("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("authInvalidCredentials"));
+      setError(describeError(err, "INVALID_CREDENTIALS"));
     } finally {
       setLoading(false);
     }
@@ -60,7 +70,7 @@ export default function LoginPage() {
       await register(name, username, password, confirmPassword);
       router.push("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("authUnableToCreate"));
+      setError(describeError(err, "UNKNOWN"));
     } finally {
       setLoading(false);
     }
@@ -69,6 +79,10 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-sm">
+        <div className="mb-3 flex justify-end">
+          <LanguageSelector />
+        </div>
+
         <div className="mb-6 flex flex-col items-center gap-2 text-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-teal-50 border border-teal-200">
             <Satellite className="h-6 w-6 text-teal-700" strokeWidth={1.75} />

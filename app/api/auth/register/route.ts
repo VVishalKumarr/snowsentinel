@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hashPassword, createSession, normalizeUsername, SESSION_COOKIE_NAME, SESSION_TTL_SECONDS } from "@/lib/auth";
 import { createUser, findUserByUsername } from "@/lib/db";
+import type { AuthErrorCode } from "@/lib/authErrors";
+
+function fail(code: AuthErrorCode, error: string, status: number) {
+  return NextResponse.json({ error, code }, { status });
+}
 
 export async function POST(req: NextRequest) {
   let body: { name?: string; username?: string; password?: string; confirmPassword?: string };
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    return fail("INVALID_BODY", "Invalid request body", 400);
   }
 
   const name = (body.name ?? "").trim();
@@ -15,23 +20,20 @@ export async function POST(req: NextRequest) {
   const password = body.password ?? "";
   const confirmPassword = body.confirmPassword ?? "";
 
-  if (!name) return NextResponse.json({ error: "Full name is required" }, { status: 400 });
+  if (!name) return fail("NAME_REQUIRED", "Full name is required", 400);
   if (username.length < 3) {
-    return NextResponse.json(
-      { error: "Username must be at least 3 characters (letters, numbers, underscore, dot)" },
-      { status: 400 }
-    );
+    return fail("USERNAME_TOO_SHORT", "Username must be at least 3 characters (letters, numbers, underscore, dot)", 400);
   }
   if (password.length < 6) {
-    return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
+    return fail("PASSWORD_TOO_SHORT", "Password must be at least 6 characters", 400);
   }
   if (password !== confirmPassword) {
-    return NextResponse.json({ error: "Passwords do not match" }, { status: 400 });
+    return fail("PASSWORD_MISMATCH", "Passwords do not match", 400);
   }
 
   const existing = await findUserByUsername(username);
   if (existing) {
-    return NextResponse.json({ error: "This username is already in use. Please choose another." }, { status: 409 });
+    return fail("USERNAME_TAKEN", "This username is already in use. Please choose another.", 409);
   }
 
   const user = await createUser({ name, username, passwordHash: hashPassword(password) });

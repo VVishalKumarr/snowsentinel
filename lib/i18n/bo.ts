@@ -152,6 +152,12 @@ const bo: Record<TranslationKey, string> = {
   authUsernameTaken: "སྤྱོད་མིང་འདི་སྔར་ནས་བེད་སྤྱོད་བྱེད་བཞིན་ཡོད། གཞན་ཞིག་འདེམས་རོགས།",
   authPasswordMismatch: "གསང་ཨང་མཐུན་མིན།",
   authLoggedIn: "ནང་འཛུལ་ཟིན།",
+  authNameRequired: "མིང་ཚང་མ་དགོས།",
+  authUsernameRequired: "སྤྱོད་མིང་ནང་འཇུག་གྱིས།",
+  authUsernameTooShort: "སྤྱོད་མིང་ཉུང་མཐའ་ཡིག་འབྲུ་༣་དགོས (ཡིག་འབྲུ། ཨང་གྲངས། འོག་ཐིག གོང་ཐིག)།",
+  authPasswordTooShort: "གསང་ཨང་ཉུང་མཐའ་ཡིག་འབྲུ་༦་དགོས།",
+  authMissingCredentials: "སྤྱོད་མིང་དང་གསང་ཨང་གཉིས་ཀ་དགོས།",
+  authSomethingWentWrong: "འཕྲོ་འཛིན་ལོག་སོང་། སླར་ཡང་འབད་བརྩོན་གྱིས།",
 
   alertWhat: "ཅི་ཞིག",
   alertWhere: "གང་དུ།",
