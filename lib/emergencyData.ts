@@ -2,6 +2,8 @@
 // Everything here is fictional and labeled DEMO in the UI. Data shapes are
 // designed so a real shelter registry, places API, or dispatch system can
 // be swapped in without changing component code — see each list's comment.
+// Shelters/services/ambulances are keyed by region so switching regions in
+// the dashboard shows genuinely different, geographically appropriate data.
 
 import type {
   Shelter,
@@ -34,143 +36,90 @@ function minutesAgoISO(mins: number): string {
 // ---------------------------------------------------------------------------
 // Shelters — replace with a real shelter registry / CAP feed keyed by region.
 // ---------------------------------------------------------------------------
-export const SHELTERS: Shelter[] = [
-  {
-    id: "sh1",
-    name: "Mountain Community Center (Demo)",
-    position: [27.868, 86.803],
-    distanceKm: 1.8,
-    capacity: 500,
-    occupied: 312,
-    accessibility: "Wheelchair accessible, ground-floor sleeping area",
-    isOpen: true,
-    lastSynced: DEMO_SYNC_TIME,
-    source: "DEMO",
-  },
-  {
-    id: "sh2",
-    name: "Valley Relief Shelter (Demo)",
-    position: [27.833, 86.774],
-    distanceKm: 3.9,
-    capacity: 300,
-    occupied: 300,
-    accessibility: "Stairs only, no wheelchair access",
-    isOpen: true,
-    lastSynced: DEMO_SYNC_TIME,
-    source: "DEMO",
-  },
-  {
-    id: "sh3",
-    name: "Sherpani Community Hall (Demo)",
-    position: [27.803, 86.744],
-    distanceKm: 7.6,
-    capacity: 220,
-    occupied: 40,
-    accessibility: "Wheelchair accessible",
-    isOpen: true,
-    lastSynced: DEMO_SYNC_TIME,
-    source: "DEMO",
-  },
-  {
-    id: "sh4",
-    name: "Ridge Transit Shelter (Demo)",
-    position: [27.878, 86.81],
-    distanceKm: 0.9,
-    capacity: 150,
-    occupied: 0,
-    accessibility: "Stairs only",
-    isOpen: false,
-    lastSynced: DEMO_SYNC_TIME,
-    source: "DEMO",
-  },
-];
+const SHELTERS_BY_REGION: Record<string, Shelter[]> = {
+  khumbu: [
+    { id: "khumbu-sh1", name: "Mountain Community Center (Demo)", position: [27.868, 86.803], distanceKm: 1.8, capacity: 500, occupied: 312, accessibility: "Wheelchair accessible, ground-floor sleeping area", isOpen: true, lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+    { id: "khumbu-sh2", name: "Valley Relief Shelter (Demo)", position: [27.833, 86.774], distanceKm: 3.9, capacity: 300, occupied: 300, accessibility: "Stairs only, no wheelchair access", isOpen: true, lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+    { id: "khumbu-sh3", name: "Sherpani Community Hall (Demo)", position: [27.803, 86.744], distanceKm: 7.6, capacity: 220, occupied: 40, accessibility: "Wheelchair accessible", isOpen: true, lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+    { id: "khumbu-sh4", name: "Ridge Transit Shelter (Demo)", position: [27.878, 86.81], distanceKm: 0.9, capacity: 150, occupied: 0, accessibility: "Stairs only", isOpen: false, lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+  ],
+  annapurna: [
+    { id: "annapurna-sh1", name: "Sanctuary Community Center (Demo)", position: [28.472, 83.867], distanceKm: 1.8, capacity: 500, occupied: 312, accessibility: "Wheelchair accessible, ground-floor sleeping area", isOpen: true, lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+    { id: "annapurna-sh2", name: "Valley Relief Shelter (Demo)", position: [28.44, 83.855], distanceKm: 3.9, capacity: 300, occupied: 300, accessibility: "Stairs only, no wheelchair access", isOpen: true, lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+    { id: "annapurna-sh3", name: "Landruk Community Hall (Demo)", position: [28.418, 83.849], distanceKm: 7.6, capacity: 220, occupied: 40, accessibility: "Wheelchair accessible", isOpen: true, lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+    { id: "annapurna-sh4", name: "Ridge Transit Shelter (Demo)", position: [28.508, 83.879], distanceKm: 0.9, capacity: 150, occupied: 0, accessibility: "Stairs only", isOpen: false, lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+  ],
+  langtang: [
+    { id: "langtang-sh1", name: "Ridgeview Community Center (Demo)", position: [28.168, 85.536], distanceKm: 1.8, capacity: 500, occupied: 312, accessibility: "Wheelchair accessible, ground-floor sleeping area", isOpen: true, lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+    { id: "langtang-sh2", name: "Valley Relief Shelter (Demo)", position: [28.14, 85.525], distanceKm: 3.9, capacity: 300, occupied: 300, accessibility: "Stairs only, no wheelchair access", isOpen: true, lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+    { id: "langtang-sh3", name: "Highland Community Hall (Demo)", position: [28.132, 85.522], distanceKm: 7.6, capacity: 220, occupied: 40, accessibility: "Wheelchair accessible", isOpen: true, lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+    { id: "langtang-sh4", name: "Ridge Transit Shelter (Demo)", position: [28.198, 85.546], distanceKm: 0.9, capacity: 150, occupied: 0, accessibility: "Stairs only", isOpen: false, lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+  ],
+};
+
+export function getShelters(regionId: string): Shelter[] {
+  return SHELTERS_BY_REGION[regionId] ?? [];
+}
 
 // ---------------------------------------------------------------------------
 // Emergency services — replace with a live places/dispatch API per region.
 // ---------------------------------------------------------------------------
-export const EMERGENCY_SERVICES: EmergencyService[] = [
-  {
-    id: "es1",
-    name: "Khumbu Valley Hospital (Demo)",
-    type: "hospital",
-    position: [27.832, 86.771],
-    distanceKm: 2.4,
-    status: "Open 24/7",
-    lastSynced: DEMO_SYNC_TIME,
-    source: "DEMO",
-  },
-  {
-    id: "es2",
-    name: "Sherpani Gateway Police Post (Demo)",
-    type: "police",
-    position: [27.801, 86.741],
-    distanceKm: 3.1,
-    status: "Staffed",
-    lastSynced: DEMO_SYNC_TIME,
-    source: "DEMO",
-  },
-  {
-    id: "es3",
-    name: "Valley Fire & Rescue Post (Demo)",
-    type: "fire",
-    position: [27.845, 86.78],
-    distanceKm: 4.7,
-    status: "Staffed",
-    lastSynced: DEMO_SYNC_TIME,
-    source: "DEMO",
-  },
-  {
-    id: "es4",
-    name: "Khumbu Emergency Response Center (Demo)",
-    type: "response_center",
-    position: [27.83, 86.77],
-    distanceKm: 3.5,
-    status: "Operational",
-    lastSynced: DEMO_SYNC_TIME,
-    source: "DEMO",
-  },
-];
+const EMERGENCY_SERVICES_BY_REGION: Record<string, EmergencyService[]> = {
+  khumbu: [
+    { id: "khumbu-es1", name: "Khumbu Valley Hospital (Demo)", type: "hospital", position: [27.832, 86.771], distanceKm: 2.4, status: "Open 24/7", lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+    { id: "khumbu-es2", name: "Sherpani Gateway Police Post (Demo)", type: "police", position: [27.801, 86.741], distanceKm: 3.1, status: "Staffed", lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+    { id: "khumbu-es3", name: "Valley Fire & Rescue Post (Demo)", type: "fire", position: [27.845, 86.78], distanceKm: 4.7, status: "Staffed", lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+    { id: "khumbu-es4", name: "Khumbu Emergency Response Center (Demo)", type: "response_center", position: [27.83, 86.77], distanceKm: 3.5, status: "Operational", lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+  ],
+  annapurna: [
+    { id: "annapurna-es1", name: "Annapurna Valley Hospital (Demo)", type: "hospital", position: [28.465, 83.862], distanceKm: 2.4, status: "Open 24/7", lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+    { id: "annapurna-es2", name: "Landruk Gateway Police Post (Demo)", type: "police", position: [28.418, 83.849], distanceKm: 3.1, status: "Staffed", lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+    { id: "annapurna-es3", name: "Valley Fire & Rescue Post (Demo)", type: "fire", position: [28.46, 83.86], distanceKm: 4.7, status: "Staffed", lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+    { id: "annapurna-es4", name: "Annapurna Emergency Response Center (Demo)", type: "response_center", position: [28.47, 83.865], distanceKm: 3.5, status: "Operational", lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+  ],
+  langtang: [
+    { id: "langtang-es1", name: "Langtang Valley Hospital (Demo)", type: "hospital", position: [28.16, 85.532], distanceKm: 2.4, status: "Open 24/7", lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+    { id: "langtang-es2", name: "Highland Gateway Police Post (Demo)", type: "police", position: [28.132, 85.522], distanceKm: 3.1, status: "Staffed", lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+    { id: "langtang-es3", name: "Valley Fire & Rescue Post (Demo)", type: "fire", position: [28.155, 85.53], distanceKm: 4.7, status: "Staffed", lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+    { id: "langtang-es4", name: "Langtang Emergency Response Center (Demo)", type: "response_center", position: [28.16, 85.533], distanceKm: 3.5, status: "Operational", lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+  ],
+};
+
+export function getEmergencyServices(regionId: string): EmergencyService[] {
+  return EMERGENCY_SERVICES_BY_REGION[regionId] ?? [];
+}
 
 // ---------------------------------------------------------------------------
 // Ambulances — replace with a live dispatch feed. AVAILABLE count drives the
 // overview stat automatically (not hardcoded).
 // ---------------------------------------------------------------------------
-export const AMBULANCES: Ambulance[] = [
-  {
-    id: "A-104",
-    name: "Ambulance A-104",
-    position: [27.834, 86.773],
-    distanceKm: 1.6,
-    status: "AVAILABLE",
-    etaMinutes: 7,
-    lastSynced: DEMO_SYNC_TIME,
-    source: "DEMO",
-  },
-  {
-    id: "A-118",
-    name: "Ambulance A-118",
-    position: [27.85, 86.79],
-    distanceKm: 4.2,
-    status: "EN_ROUTE",
-    etaMinutes: 15,
-    lastSynced: DEMO_SYNC_TIME,
-    source: "DEMO",
-  },
-  {
-    id: "A-122",
-    name: "Ambulance A-122",
-    position: [27.81, 86.75],
-    distanceKm: 6.0,
-    status: "AVAILABLE",
-    etaMinutes: 12,
-    lastSynced: DEMO_SYNC_TIME,
-    source: "DEMO",
-  },
-];
+const AMBULANCES_BY_REGION: Record<string, Ambulance[]> = {
+  khumbu: [
+    { id: "A-104", name: "Ambulance A-104", position: [27.834, 86.773], distanceKm: 1.6, status: "AVAILABLE", etaMinutes: 7, lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+    { id: "A-118", name: "Ambulance A-118", position: [27.85, 86.79], distanceKm: 4.2, status: "EN_ROUTE", etaMinutes: 15, lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+    { id: "A-122", name: "Ambulance A-122", position: [27.81, 86.75], distanceKm: 6.0, status: "AVAILABLE", etaMinutes: 12, lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+  ],
+  annapurna: [
+    { id: "A-204", name: "Ambulance A-204", position: [28.467, 83.863], distanceKm: 1.6, status: "AVAILABLE", etaMinutes: 7, lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+    { id: "A-218", name: "Ambulance A-218", position: [28.5, 83.878], distanceKm: 4.2, status: "EN_ROUTE", etaMinutes: 15, lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+    { id: "A-222", name: "Ambulance A-222", position: [28.43, 83.85], distanceKm: 6.0, status: "AVAILABLE", etaMinutes: 12, lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+  ],
+  langtang: [
+    { id: "A-304", name: "Ambulance A-304", position: [28.162, 85.533], distanceKm: 1.6, status: "AVAILABLE", etaMinutes: 7, lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+    { id: "A-318", name: "Ambulance A-318", position: [28.19, 85.545], distanceKm: 4.2, status: "EN_ROUTE", etaMinutes: 15, lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+    { id: "A-322", name: "Ambulance A-322", position: [28.14, 85.52], distanceKm: 6.0, status: "AVAILABLE", etaMinutes: 12, lastSynced: DEMO_SYNC_TIME, source: "DEMO" },
+  ],
+};
+
+export function getAmbulances(regionId: string): Ambulance[] {
+  return AMBULANCES_BY_REGION[regionId] ?? [];
+}
 
 // ---------------------------------------------------------------------------
 // Volunteers — anonymous IDs only, no exact location exposed, per privacy
-// requirement. Replace with a verified volunteer registry.
+// requirement. Area names are generic (not tied to one region's geography),
+// so the same pool applies regardless of selected region. Replace with a
+// verified volunteer registry.
 // ---------------------------------------------------------------------------
 const VOLUNTEER_AREAS = ["Valley North", "Valley East", "Valley South", "Ridge West", "Basecamp Sector"];
 const VOLUNTEER_SKILL_SETS: Volunteer["skills"][] = [

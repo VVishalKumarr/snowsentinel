@@ -31,7 +31,7 @@ import MountainSelector from "@/components/MountainSelector";
 import { useScenario } from "@/lib/ScenarioContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useDisasterSimulation } from "@/lib/useDisasterSimulation";
-import { SHELTERS, AMBULANCES, VOLUNTEERS } from "@/lib/emergencyData";
+import { getShelters, getAmbulances, VOLUNTEERS } from "@/lib/emergencyData";
 import { DASHBOARD_TABS, type DashboardTab } from "@/lib/dashboardTabs";
 
 function DashboardInner() {
@@ -46,7 +46,9 @@ function DashboardInner() {
   const { familyMembers } = useAppState();
   const simulation = useDisasterSimulation(setTab, () => setImpactSignal((s) => s + 1));
 
-  const availableAmbulances = AMBULANCES.filter((a) => a.status === "AVAILABLE").length;
+  const shelters = getShelters(scenario.region.id);
+  const ambulances = getAmbulances(scenario.region.id);
+  const availableAmbulances = ambulances.filter((a) => a.status === "AVAILABLE").length;
   const availableVolunteers = VOLUNTEERS.filter((v) => v.status === "AVAILABLE").length;
   const safeCount = familyMembers.filter((m) => m.status === "SAFE").length;
 
@@ -129,7 +131,7 @@ function DashboardInner() {
                 value={`+${scenario.environmentalChange.deltaFromPrevious}%`}
               />
               <StatCard icon={ShieldHalf} label="Priority Zones" value={scenario.settlements.length} />
-              <StatCard icon={Home} label="Nearby Shelters" value={SHELTERS.length} />
+              <StatCard icon={Home} label="Nearby Shelters" value={shelters.length} />
               <StatCard icon={LifeBuoy} label="Available Ambulances" value={availableAmbulances} />
               <StatCard icon={Users2} label="Volunteers Available" value={availableVolunteers} />
               <StatCard

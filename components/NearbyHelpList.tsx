@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { Hospital, Shield, Flame, Building2, PhoneCall, Navigation } from "lucide-react";
-import { EMERGENCY_SERVICES, DEMO_SYNC_TIME } from "@/lib/emergencyData";
+import { getEmergencyServices, DEMO_SYNC_TIME } from "@/lib/emergencyData";
 import type { EmergencyServiceType } from "@/lib/emergencyTypes";
+import { useScenario } from "@/lib/ScenarioContext";
 
 const TYPE_META: Record<EmergencyServiceType, { label: string; icon: typeof Hospital; emoji: string }> = {
   hospital: { label: "Hospital", icon: Hospital, emoji: "🏥" },
@@ -26,11 +27,12 @@ function directionsUrl(position: [number, number]) {
 }
 
 export default function NearbyHelpList() {
+  const { scenario } = useScenario();
   const [filter, setFilter] = useState<EmergencyServiceType | "all">("all");
 
-  const services = EMERGENCY_SERVICES.filter((s) => filter === "all" || s.type === filter).sort(
-    (a, b) => a.distanceKm - b.distanceKm
-  );
+  const services = getEmergencyServices(scenario.region.id)
+    .filter((s) => filter === "all" || s.type === filter)
+    .sort((a, b) => a.distanceKm - b.distanceKm);
 
   return (
     <div className="glass-panel rounded-2xl p-4 sm:p-5">

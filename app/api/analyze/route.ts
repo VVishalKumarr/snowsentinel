@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { calculateRisk } from "@/lib/riskEngine";
 import { generateExplanation } from "@/lib/ai";
-import { getScenario, HUMAN_VERIFICATION_STEPS } from "@/lib/demoData";
+import { getScenario, HUMAN_VERIFICATION_STEPS, DEFAULT_SCENARIO_ID } from "@/lib/demoData";
 import type { AnalyzeRequest, AnalyzeResponse, RiskFactor } from "@/lib/types";
 
 export async function POST(req: NextRequest) {
@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     body = {};
   }
 
-  const scenario = getScenario(body.scenarioId ?? "high-anomaly");
+  const scenario = getScenario(body.scenarioId ?? DEFAULT_SCENARIO_ID);
 
   const rawFactors: Pick<RiskFactor, "key" | "label" | "score" | "description">[] =
     scenario.risk.factors.map((f) => ({

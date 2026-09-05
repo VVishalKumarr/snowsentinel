@@ -26,14 +26,15 @@ function ControlBlock({
 }
 
 export default function MountainSelector() {
-  const { scenario, scenarioId, setScenarioId, scenarios } = useScenario();
+  const { scenario, scenarioId, setScenarioId, setRegionId, scenariosForCurrentRegion } = useScenario();
 
   return (
     <div className="glass-panel flex flex-wrap items-end gap-x-8 gap-y-4 rounded-2xl p-4 sm:p-5">
       <ControlBlock icon={MapPin} label="REGION">
         <div className="relative">
           <select
-            defaultValue="khumbu"
+            value={scenario.region.id}
+            onChange={(e) => setRegionId(e.target.value)}
             className="appearance-none rounded-lg border border-slate-200 bg-white py-1.5 pl-3 pr-8 text-sm text-slate-800 outline-none focus:border-teal-400"
           >
             {REGIONS.map((r) => (
@@ -65,7 +66,7 @@ export default function MountainSelector() {
             onChange={(e) => setScenarioId(e.target.value)}
             className="appearance-none rounded-lg border border-teal-300 bg-teal-50 py-1.5 pl-3 pr-8 text-sm text-teal-800 outline-none focus:border-teal-500"
           >
-            {scenarios.map((s) => (
+            {scenariosForCurrentRegion.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
               </option>

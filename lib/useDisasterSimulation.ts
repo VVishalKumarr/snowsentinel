@@ -31,7 +31,7 @@ export function useDisasterSimulation(
   onNavigate: (tab: DashboardTab) => void,
   onTriggerImpactSimulation: () => void
 ) {
-  const { setScenarioId } = useScenario();
+  const { scenario, setScenarioId } = useScenario();
   const [running, setRunning] = useState(false);
   const [stepIndex, setStepIndex] = useState(-1);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -48,7 +48,7 @@ export function useDisasterSimulation(
   const run = () => {
     stop();
     setRunning(true);
-    setScenarioId("extreme");
+    setScenarioId(`${scenario.region.id}-extreme`);
     let elapsed = 0;
     STEPS.forEach((step, i) => {
       elapsed += step.delayMs;

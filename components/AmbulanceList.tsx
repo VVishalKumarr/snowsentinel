@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { Ambulance as AmbulanceIcon } from "lucide-react";
-import { AMBULANCES, DEMO_SYNC_TIME } from "@/lib/emergencyData";
+import { getAmbulances, DEMO_SYNC_TIME } from "@/lib/emergencyData";
 import type { AmbulanceStatus } from "@/lib/emergencyTypes";
+import { useScenario } from "@/lib/ScenarioContext";
 
 const STATUS_STYLE: Record<AmbulanceStatus, string> = {
   AVAILABLE: "border-emerald-300 bg-emerald-50 text-emerald-700",
@@ -12,6 +13,8 @@ const STATUS_STYLE: Record<AmbulanceStatus, string> = {
 };
 
 export default function AmbulanceList() {
+  const { scenario } = useScenario();
+  const ambulances = getAmbulances(scenario.region.id);
   const [requested, setRequested] = useState<Set<string>>(new Set());
 
   return (
@@ -26,7 +29,7 @@ export default function AmbulanceList() {
       </p>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {AMBULANCES.map((a) => (
+        {ambulances.map((a) => (
           <div key={a.id} className="rounded-xl border border-slate-200 bg-white p-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-800">

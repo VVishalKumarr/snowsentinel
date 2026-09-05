@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { Tent, Navigation, Accessibility } from "lucide-react";
-import { SHELTERS } from "@/lib/emergencyData";
+import { getShelters } from "@/lib/emergencyData";
 import type { Shelter } from "@/lib/emergencyTypes";
+import { useScenario } from "@/lib/ScenarioContext";
 
 type FilterId = "open" | "available" | "full" | "accessible";
 
@@ -29,6 +30,7 @@ function directionsUrl(position: [number, number]) {
 }
 
 export default function ShelterList() {
+  const { scenario } = useScenario();
   const [active, setActive] = useState<Set<FilterId>>(new Set());
 
   const toggle = (id: FilterId) => {
@@ -41,8 +43,8 @@ export default function ShelterList() {
   };
 
   const shelters = useMemo(
-    () => SHELTERS.filter((s) => matchesFilter(s, active)).sort((a, b) => a.distanceKm - b.distanceKm),
-    [active]
+    () => getShelters(scenario.region.id).filter((s) => matchesFilter(s, active)).sort((a, b) => a.distanceKm - b.distanceKm),
+    [active, scenario.region.id]
   );
 
   return (

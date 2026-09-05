@@ -7,7 +7,7 @@ import type { HazardScenario, Settlement } from "@/lib/types";
 import StatCard from "./StatCard";
 import MapLayerControls from "./MapLayerControls";
 import { DEFAULT_LAYERS, type MapLayerToggles } from "@/lib/mapLayers";
-import { SHELTERS, EMERGENCY_SERVICES, AMBULANCES } from "@/lib/emergencyData";
+import { getShelters, getEmergencyServices, getAmbulances } from "@/lib/emergencyData";
 
 const HazardMap = dynamic(() => import("./HazardMap"), {
   ssr: false,
@@ -95,9 +95,9 @@ export default function ImpactZone({
             selectedSettlementId={selectedSettlement?.id ?? null}
             onSimulationComplete={() => setSimulationDone(true)}
             layers={layers}
-            shelters={SHELTERS}
-            services={EMERGENCY_SERVICES}
-            ambulances={AMBULANCES}
+            shelters={getShelters(scenario.region.id)}
+            services={getEmergencyServices(scenario.region.id)}
+            ambulances={getAmbulances(scenario.region.id)}
           />
         </div>
 
