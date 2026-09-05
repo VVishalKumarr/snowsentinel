@@ -5,13 +5,14 @@ import type { CapacitorConfig } from "@capacitor/cli";
 // Next.js server (this app uses a live API route for AI explanations, so it
 // is not a static export) via `server.url` below.
 //
-// - Local development / emulator testing: keep the default. On the Android
-//   emulator, 10.0.2.2 is the host machine's localhost, so `npm run dev`
-//   on your computer is reachable from inside the emulator.
-// - Production: set CAPACITOR_SERVER_URL to your deployed HTTPS URL (e.g.
-//   a Vercel deployment of this project) before running `npx cap sync`,
-//   then rebuild the native project in Android Studio / Xcode.
-const serverUrl = process.env.CAPACITOR_SERVER_URL || "http://10.0.2.2:3000";
+// - Default: the live production deployment, so a built APK/IPA works on
+//   any real device with normal internet — no dev server required.
+// - Local dev/emulator testing: set CAPACITOR_SERVER_URL=http://10.0.2.2:3000
+//   (10.0.2.2 is the Android emulator's alias for your machine's localhost)
+//   before `npx cap sync`, so the emulator hits your `npm run dev` server.
+// - Redeploying: after a new production deploy, no change needed here — the
+//   URL below stays the same unless you move to a different host.
+const serverUrl = process.env.CAPACITOR_SERVER_URL || "https://snowsenti.vercel.app";
 
 const config: CapacitorConfig = {
   appId: "com.binarybrains.snowsentinel",

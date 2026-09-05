@@ -9,6 +9,17 @@ imagery, risk scores, priority zones, shelters, ambulances, and volunteers
 are demo/synthetic data unless explicitly labeled otherwise. See the Trust &
 Limitations section in the app's Emergency tab.
 
+## Live deployment
+
+**https://snowsenti.vercel.app** — open this on any phone's browser and use
+it directly, no install needed. It's a PWA (installable via "Add to Home
+Screen" on Android/iOS) with offline caching already wired up. All three
+demo regions (Khumbu, Annapurna Sanctuary, Langtang Valley) are fully
+functional there.
+
+To redeploy after making changes: `npx vercel --prod` from the project root
+(requires being logged in via `npx vercel login`).
+
 ## Running the web app
 
 ```bash
@@ -67,11 +78,12 @@ cd android
 
 Or open the `android/` folder directly in Android Studio and click Run.
 
-By default the app points at `http://10.0.2.2:3000` (the Android emulator's
-alias for your computer's `localhost`), so `npm run dev` on your machine is
-reachable from the emulator. For a real device or production build, deploy
-the Next.js app (e.g. to Vercel) and set `CAPACITOR_SERVER_URL` to that HTTPS
-URL, then re-run `npx cap sync android`.
+By default the app points at the live deployment
+(`https://snowsenti.vercel.app`), so the APK works on a real phone with
+normal internet — no dev server needed. For local development against
+`npm run dev` instead, set `CAPACITOR_SERVER_URL=http://10.0.2.2:3000`
+(10.0.2.2 is the Android emulator's alias for your machine's `localhost`)
+before running `npx cap sync android`, then rebuild.
 
 ### iOS
 
