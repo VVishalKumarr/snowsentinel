@@ -6,6 +6,12 @@
 // derived from real satellite feeds, weather records, or hazard agency data.
 // Do not use for real-world decision-making. All three regions below are
 // fully wired up with independent scenario data — none are placeholders.
+//
+// Region/settlement/infrastructure NAMES are treated as proper nouns and are
+// not translated (consistent with place names generally). Everything else —
+// descriptions, preparedness notes, risk factor labels, recommended actions,
+// and generated explanations — is stored as a TranslationKey (see
+// lib/i18n/en.ts) and translated at render time via useLanguage()'s t().
 
 import type {
   RegionOption,
@@ -15,6 +21,7 @@ import type {
   ImpactZonePolygon,
   RiskFactor,
 } from "./types";
+import type { TranslationKey } from "./i18n/en";
 import { calculateRisk } from "./riskEngine";
 
 export const REGIONS: (RegionOption & { available: boolean })[] = [
@@ -23,7 +30,7 @@ export const REGIONS: (RegionOption & { available: boolean })[] = [
     name: "Khumbu / Everest Region",
     shortName: "Khumbu / Everest",
     center: [27.93, 86.85],
-    description: "Demo region loosely inspired by the Khumbu valley, Nepal.",
+    descriptionKey: "regionKhumbuDescription",
     available: true,
   },
   {
@@ -31,7 +38,7 @@ export const REGIONS: (RegionOption & { available: boolean })[] = [
     name: "Annapurna Sanctuary",
     shortName: "Annapurna Sanctuary",
     center: [28.53, 83.88],
-    description: "Demo region loosely inspired by the Annapurna Sanctuary, Nepal.",
+    descriptionKey: "regionAnnapurnaDescription",
     available: true,
   },
   {
@@ -39,7 +46,7 @@ export const REGIONS: (RegionOption & { available: boolean })[] = [
     name: "Langtang Valley",
     shortName: "Langtang Valley",
     center: [28.21, 85.55],
-    description: "Demo region loosely inspired by the Langtang valley, Nepal.",
+    descriptionKey: "regionLangtangDescription",
     available: true,
   },
 ];
@@ -62,7 +69,7 @@ const GEO_BY_REGION: Record<string, RegionGeo> = {
         population: 210,
         exposure: "HIGH",
         distanceFromPathKm: 1.2,
-        preparedness: "Review evacuation routes; confirm with local authorities.",
+        preparednessKey: "settlementPreparednessHigh",
       },
       {
         id: "khumbu-s2",
@@ -72,7 +79,7 @@ const GEO_BY_REGION: Record<string, RegionGeo> = {
         population: 340,
         exposure: "MODERATE",
         distanceFromPathKm: 3.8,
-        preparedness: "Maintain monitoring; verify communication channels.",
+        preparednessKey: "settlementPreparednessModerate",
       },
       {
         id: "khumbu-s3",
@@ -82,7 +89,7 @@ const GEO_BY_REGION: Record<string, RegionGeo> = {
         population: 480,
         exposure: "LOW",
         distanceFromPathKm: 7.5,
-        preparedness: "Standard monitoring posture; no immediate action indicated.",
+        preparednessKey: "settlementPreparednessLow",
       },
     ],
     infrastructure: [
@@ -100,9 +107,9 @@ const GEO_BY_REGION: Record<string, RegionGeo> = {
       [27.85, 86.79],
     ],
     impactZones: [
-      { id: "khumbu-z1", label: "HIGH IMPACT ZONE", color: "#ef4444", positions: [[27.975, 86.915], [27.975, 86.885], [27.935, 86.855], [27.935, 86.885]] },
-      { id: "khumbu-z2", label: "MONITORING ZONE", color: "#f97316", positions: [[27.945, 86.885], [27.945, 86.855], [27.865, 86.795], [27.865, 86.825]] },
-      { id: "khumbu-z3", label: "LOWER IMPACT ZONE", color: "#22c55e", positions: [[27.87, 86.825], [27.87, 86.76], [27.79, 86.73], [27.79, 86.81]] },
+      { id: "khumbu-z1", labelKey: "zoneLabelHigh", color: "#ef4444", positions: [[27.975, 86.915], [27.975, 86.885], [27.935, 86.855], [27.935, 86.885]] },
+      { id: "khumbu-z2", labelKey: "zoneLabelMonitoring", color: "#f97316", positions: [[27.945, 86.885], [27.945, 86.855], [27.865, 86.795], [27.865, 86.825]] },
+      { id: "khumbu-z3", labelKey: "zoneLabelLower", color: "#22c55e", positions: [[27.87, 86.825], [27.87, 86.76], [27.79, 86.73], [27.79, 86.81]] },
     ],
   },
   annapurna: {
@@ -115,7 +122,7 @@ const GEO_BY_REGION: Record<string, RegionGeo> = {
         population: 260,
         exposure: "HIGH",
         distanceFromPathKm: 1.5,
-        preparedness: "Review evacuation routes; confirm with local authorities.",
+        preparednessKey: "settlementPreparednessHigh",
       },
       {
         id: "annapurna-s2",
@@ -125,7 +132,7 @@ const GEO_BY_REGION: Record<string, RegionGeo> = {
         population: 300,
         exposure: "MODERATE",
         distanceFromPathKm: 4.0,
-        preparedness: "Maintain monitoring; verify communication channels.",
+        preparednessKey: "settlementPreparednessModerate",
       },
       {
         id: "annapurna-s3",
@@ -135,7 +142,7 @@ const GEO_BY_REGION: Record<string, RegionGeo> = {
         population: 420,
         exposure: "LOW",
         distanceFromPathKm: 8.0,
-        preparedness: "Standard monitoring posture; no immediate action indicated.",
+        preparednessKey: "settlementPreparednessLow",
       },
     ],
     infrastructure: [
@@ -153,9 +160,9 @@ const GEO_BY_REGION: Record<string, RegionGeo> = {
       [28.4, 83.848],
     ],
     impactZones: [
-      { id: "annapurna-z1", label: "HIGH IMPACT ZONE", color: "#ef4444", positions: [[28.555, 83.895], [28.555, 83.875], [28.5, 83.86], [28.5, 83.885]] },
-      { id: "annapurna-z2", label: "MONITORING ZONE", color: "#f97316", positions: [[28.51, 83.885], [28.51, 83.86], [28.44, 83.845], [28.44, 83.868]] },
-      { id: "annapurna-z3", label: "LOWER IMPACT ZONE", color: "#22c55e", positions: [[28.45, 83.868], [28.45, 83.83], [28.38, 83.81], [28.38, 83.85]] },
+      { id: "annapurna-z1", labelKey: "zoneLabelHigh", color: "#ef4444", positions: [[28.555, 83.895], [28.555, 83.875], [28.5, 83.86], [28.5, 83.885]] },
+      { id: "annapurna-z2", labelKey: "zoneLabelMonitoring", color: "#f97316", positions: [[28.51, 83.885], [28.51, 83.86], [28.44, 83.845], [28.44, 83.868]] },
+      { id: "annapurna-z3", labelKey: "zoneLabelLower", color: "#22c55e", positions: [[28.45, 83.868], [28.45, 83.83], [28.38, 83.81], [28.38, 83.85]] },
     ],
   },
   langtang: {
@@ -168,7 +175,7 @@ const GEO_BY_REGION: Record<string, RegionGeo> = {
         population: 180,
         exposure: "HIGH",
         distanceFromPathKm: 1.3,
-        preparedness: "Review evacuation routes; confirm with local authorities.",
+        preparednessKey: "settlementPreparednessHigh",
       },
       {
         id: "langtang-s2",
@@ -178,7 +185,7 @@ const GEO_BY_REGION: Record<string, RegionGeo> = {
         population: 250,
         exposure: "MODERATE",
         distanceFromPathKm: 3.6,
-        preparedness: "Maintain monitoring; verify communication channels.",
+        preparednessKey: "settlementPreparednessModerate",
       },
       {
         id: "langtang-s3",
@@ -188,7 +195,7 @@ const GEO_BY_REGION: Record<string, RegionGeo> = {
         population: 300,
         exposure: "LOW",
         distanceFromPathKm: 7.0,
-        preparedness: "Standard monitoring posture; no immediate action indicated.",
+        preparednessKey: "settlementPreparednessLow",
       },
     ],
     infrastructure: [
@@ -206,38 +213,38 @@ const GEO_BY_REGION: Record<string, RegionGeo> = {
       [28.1, 85.515],
     ],
     impactZones: [
-      { id: "langtang-z1", label: "HIGH IMPACT ZONE", color: "#ef4444", positions: [[28.235, 85.56], [28.235, 85.54], [28.19, 85.525], [28.19, 85.545]] },
-      { id: "langtang-z2", label: "MONITORING ZONE", color: "#f97316", positions: [[28.195, 85.545], [28.195, 85.522], [28.135, 85.508], [28.135, 85.528]] },
-      { id: "langtang-z3", label: "LOWER IMPACT ZONE", color: "#22c55e", positions: [[28.14, 85.528], [28.14, 85.495], [28.08, 85.478], [28.08, 85.51]] },
+      { id: "langtang-z1", labelKey: "zoneLabelHigh", color: "#ef4444", positions: [[28.235, 85.56], [28.235, 85.54], [28.19, 85.525], [28.19, 85.545]] },
+      { id: "langtang-z2", labelKey: "zoneLabelMonitoring", color: "#f97316", positions: [[28.195, 85.545], [28.195, 85.522], [28.135, 85.508], [28.135, 85.528]] },
+      { id: "langtang-z3", labelKey: "zoneLabelLower", color: "#22c55e", positions: [[28.14, 85.528], [28.14, 85.495], [28.08, 85.478], [28.08, 85.51]] },
     ],
   },
 };
 
-const recommendedActionsBase = [
-  "Continue monitoring the region",
-  "Verify conditions with official authorities",
-  "Review vulnerable infrastructure",
-  "Prepare communication channels",
-  "Identify safe areas and evacuation routes",
+const recommendedActionsBase: TranslationKey[] = [
+  "actionContinueMonitoring",
+  "actionVerifyConditions",
+  "actionReviewInfrastructure",
+  "actionPrepareComms",
+  "actionIdentifySafeAreas",
 ];
 
 type SeverityKey = "high-anomaly" | "stable" | "extreme";
 
 interface SeverityTemplate {
-  name: string;
-  description: string;
+  nameKey: TranslationKey;
+  descriptionKey: TranslationKey;
   environmentalChange: { snowIceChangePct: number; surfaceChangePct: number; deltaFromPrevious: number };
   timeline: { date: string; label: string; snowIceIndex: number; surfaceIndex: number }[];
-  riskFactors: Pick<RiskFactor, "key" | "label" | "score" | "description">[];
+  riskFactors: Pick<RiskFactor, "key" | "labelKey" | "score" | "descriptionKey">[];
   simulatedStats: { affectedAreaKm2: number; exposedSettlements: number; criticalInfrastructure: number };
-  recommendedActions: string[];
-  explanationTemplate: (regionName: string) => string;
+  recommendedActionKeys: TranslationKey[];
+  explanationKey: TranslationKey;
 }
 
 const SEVERITY_TEMPLATES: Record<SeverityKey, SeverityTemplate> = {
   "high-anomaly": {
-    name: "High Mountain Snow/Ice Anomaly",
-    description: "Significant observed change in snow/ice conditions.",
+    nameKey: "severityNameHighAnomaly",
+    descriptionKey: "severityDescHighAnomaly",
     environmentalChange: { snowIceChangePct: 82, surfaceChangePct: 61, deltaFromPrevious: 18 },
     timeline: [
       { date: "28 Aug", label: "28 AUG", snowIceIndex: 58, surfaceIndex: 45 },
@@ -246,19 +253,18 @@ const SEVERITY_TEMPLATES: Record<SeverityKey, SeverityTemplate> = {
       { date: "04 Sep", label: "04 SEP", snowIceIndex: 82, surfaceIndex: 61 },
     ],
     riskFactors: [
-      { key: "snowIce", label: "Snow/Ice Change", score: 82, description: "Magnitude of observed snow/ice cover change vs. previous pass." },
-      { key: "environmental", label: "Environmental Conditions", score: 66, description: "Temperature, precipitation, and wind proxies for the observation window." },
-      { key: "historical", label: "Historical Hazard", score: 75, description: "Reference to demo historical hazard incidence for this zone." },
-      { key: "terrain", label: "Terrain Exposure", score: 63, description: "Slope angle and runout exposure proxy for the source zone." },
+      { key: "snowIce", labelKey: "riskFactorSnowIce", score: 82, descriptionKey: "riskFactorSnowIceDesc" },
+      { key: "environmental", labelKey: "riskFactorEnvironmental", score: 66, descriptionKey: "riskFactorEnvironmentalDesc" },
+      { key: "historical", labelKey: "riskFactorHistorical", score: 75, descriptionKey: "riskFactorHistoricalDesc" },
+      { key: "terrain", labelKey: "riskFactorTerrain", score: 63, descriptionKey: "riskFactorTerrainDesc" },
     ],
     simulatedStats: { affectedAreaKm2: 8.4, exposedSettlements: 3, criticalInfrastructure: 5 },
-    recommendedActions: recommendedActionsBase,
-    explanationTemplate: (regionName) =>
-      `Compared with the previous observation, the prototype detected a significant change in snow/ice conditions across the ${regionName} monitored zone. Combined with the selected environmental and historical indicators, this produces an ELEVATED experimental hazard-risk score in the simulated scenario.`,
+    recommendedActionKeys: recommendedActionsBase,
+    explanationKey: "explanationHighAnomaly",
   },
   stable: {
-    name: "Stable Mountain Conditions",
-    description: "Little change between observations.",
+    nameKey: "severityNameStable",
+    descriptionKey: "severityDescStable",
     environmentalChange: { snowIceChangePct: 20, surfaceChangePct: 17, deltaFromPrevious: 2 },
     timeline: [
       { date: "28 Aug", label: "28 AUG", snowIceIndex: 18, surfaceIndex: 15 },
@@ -267,23 +273,18 @@ const SEVERITY_TEMPLATES: Record<SeverityKey, SeverityTemplate> = {
       { date: "04 Sep", label: "04 SEP", snowIceIndex: 20, surfaceIndex: 17 },
     ],
     riskFactors: [
-      { key: "snowIce", label: "Snow/Ice Change", score: 12, description: "Magnitude of observed snow/ice cover change vs. previous pass." },
-      { key: "environmental", label: "Environmental Conditions", score: 20, description: "Temperature, precipitation, and wind proxies for the observation window." },
-      { key: "historical", label: "Historical Hazard", score: 25, description: "Reference to demo historical hazard incidence for this zone." },
-      { key: "terrain", label: "Terrain Exposure", score: 30, description: "Slope angle and runout exposure proxy for the source zone." },
+      { key: "snowIce", labelKey: "riskFactorSnowIce", score: 12, descriptionKey: "riskFactorSnowIceDesc" },
+      { key: "environmental", labelKey: "riskFactorEnvironmental", score: 20, descriptionKey: "riskFactorEnvironmentalDesc" },
+      { key: "historical", labelKey: "riskFactorHistorical", score: 25, descriptionKey: "riskFactorHistoricalDesc" },
+      { key: "terrain", labelKey: "riskFactorTerrain", score: 30, descriptionKey: "riskFactorTerrainDesc" },
     ],
     simulatedStats: { affectedAreaKm2: 1.1, exposedSettlements: 0, criticalInfrastructure: 0 },
-    recommendedActions: [
-      "Continue routine monitoring",
-      "No unusual action indicated at this time",
-      "Revisit at next scheduled observation pass",
-    ],
-    explanationTemplate: (regionName) =>
-      `Compared with the previous observation, the prototype detected minimal change in snow/ice or surface conditions across the ${regionName} monitored zone. Environmental and historical indicators remain within the typical demo baseline range, producing a LOW experimental hazard-risk score in the simulated scenario.`,
+    recommendedActionKeys: ["actionContinueRoutine", "actionNoUnusualAction", "actionRevisitNextPass"],
+    explanationKey: "explanationStable",
   },
   extreme: {
-    name: "Extreme Weather + Mountain Change",
-    description: "Strong environmental anomaly combined with significant observed change.",
+    nameKey: "severityNameExtreme",
+    descriptionKey: "severityDescExtreme",
     environmentalChange: { snowIceChangePct: 95, surfaceChangePct: 88, deltaFromPrevious: 34 },
     timeline: [
       { date: "28 Aug", label: "28 AUG", snowIceIndex: 60, surfaceIndex: 50 },
@@ -292,15 +293,14 @@ const SEVERITY_TEMPLATES: Record<SeverityKey, SeverityTemplate> = {
       { date: "04 Sep", label: "04 SEP", snowIceIndex: 95, surfaceIndex: 88 },
     ],
     riskFactors: [
-      { key: "snowIce", label: "Snow/Ice Change", score: 95, description: "Magnitude of observed snow/ice cover change vs. previous pass." },
-      { key: "environmental", label: "Environmental Conditions", score: 90, description: "Temperature, precipitation, and wind proxies for the observation window." },
-      { key: "historical", label: "Historical Hazard", score: 80, description: "Reference to demo historical hazard incidence for this zone." },
-      { key: "terrain", label: "Terrain Exposure", score: 70, description: "Slope angle and runout exposure proxy for the source zone." },
+      { key: "snowIce", labelKey: "riskFactorSnowIce", score: 95, descriptionKey: "riskFactorSnowIceDesc" },
+      { key: "environmental", labelKey: "riskFactorEnvironmental", score: 90, descriptionKey: "riskFactorEnvironmentalDesc" },
+      { key: "historical", labelKey: "riskFactorHistorical", score: 80, descriptionKey: "riskFactorHistoricalDesc" },
+      { key: "terrain", labelKey: "riskFactorTerrain", score: 70, descriptionKey: "riskFactorTerrainDesc" },
     ],
     simulatedStats: { affectedAreaKm2: 14.2, exposedSettlements: 3, criticalInfrastructure: 5 },
-    recommendedActions: [...recommendedActionsBase, "Escalate findings to regional monitoring authority (demo step)"],
-    explanationTemplate: (regionName) =>
-      `Compared with the previous observation, the prototype detected a severe change in snow/ice conditions combined with strong environmental anomaly indicators across the ${regionName} monitored zone. Combined with historical and terrain indicators, this produces a HIGH experimental hazard-risk score in the simulated scenario. This is a demonstration extreme case, not a live forecast.`,
+    recommendedActionKeys: [...recommendedActionsBase, "actionEscalateFindings"],
+    explanationKey: "explanationExtreme",
   },
 };
 
@@ -310,8 +310,8 @@ function buildScenariosForRegion(region: RegionOption): HazardScenario[] {
     const t = SEVERITY_TEMPLATES[severity];
     return {
       id: `${region.id}-${severity}`,
-      name: t.name,
-      description: t.description,
+      nameKey: t.nameKey,
+      descriptionKey: t.descriptionKey,
       region,
       observationCurrent: { date: "04 Sep 2026", label: "Current Observation" },
       observationPrevious: { date: "28 Aug 2026", label: "Previous Observation" },
@@ -323,8 +323,8 @@ function buildScenariosForRegion(region: RegionOption): HazardScenario[] {
       settlements: geo.settlements,
       infrastructure: geo.infrastructure,
       simulatedStats: t.simulatedStats,
-      recommendedActions: t.recommendedActions,
-      explanation: t.explanationTemplate(region.shortName),
+      recommendedActionKeys: t.recommendedActionKeys,
+      explanationKey: t.explanationKey,
     };
   });
 }
@@ -346,10 +346,10 @@ export function severityKeyOf(scenarioId: string): SeverityKey {
   return parts.slice(1).join("-") as SeverityKey;
 }
 
-export const HUMAN_VERIFICATION_STEPS = [
-  "Confirm current conditions with official hazard agencies.",
-  "Check recent weather and precipitation.",
-  "Verify satellite observations.",
-  "Review local terrain and infrastructure.",
-  "Do not treat this prototype as a standalone warning system.",
+export const HUMAN_VERIFICATION_STEPS: TranslationKey[] = [
+  "verifyStep1",
+  "verifyStep2",
+  "verifyStep3",
+  "verifyStep4",
+  "verifyStep5",
 ];

@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { Siren, PhoneCall, HeartPulse, Home, X } from "lucide-react";
 import SOSButton from "./SOSButton";
+import { useLanguage } from "@/lib/i18n";
 
 export type QuickBarTab = "emergency" | "help" | "shelters";
 
 export default function EmergencyQuickBar({ onNavigate }: { onNavigate: (tab: QuickBarTab) => void }) {
+  const { t } = useLanguage();
   const [sosOpen, setSosOpen] = useState(false);
 
   return (
@@ -18,28 +20,28 @@ export default function EmergencyQuickBar({ onNavigate }: { onNavigate: (tab: Qu
             className="flex flex-col items-center gap-1 bg-red-600 py-2.5 text-white"
           >
             <Siren className="h-5 w-5" />
-            <span className="text-[10px] font-bold tracking-wide">SOS</span>
+            <span className="text-[10px] font-bold tracking-wide">{t("sos")}</span>
           </button>
           <button
             onClick={() => onNavigate("emergency")}
             className="flex flex-col items-center gap-1 py-2.5 text-slate-600"
           >
             <PhoneCall className="h-5 w-5" />
-            <span className="text-[10px] font-medium tracking-wide">HELPLINE</span>
+            <span className="text-[10px] font-medium tracking-wide">{t("quickBarHelpline")}</span>
           </button>
           <button
             onClick={() => onNavigate("help")}
             className="flex flex-col items-center gap-1 py-2.5 text-slate-600"
           >
             <HeartPulse className="h-5 w-5" />
-            <span className="text-[10px] font-medium tracking-wide">HELP</span>
+            <span className="text-[10px] font-medium tracking-wide">{t("quickBarHelp")}</span>
           </button>
           <button
             onClick={() => onNavigate("shelters")}
             className="flex flex-col items-center gap-1 py-2.5 text-slate-600"
           >
             <Home className="h-5 w-5" />
-            <span className="text-[10px] font-medium tracking-wide">SHELTER</span>
+            <span className="text-[10px] font-medium tracking-wide">{t("quickBarShelter")}</span>
           </button>
         </div>
       </div>
@@ -58,7 +60,7 @@ export default function EmergencyQuickBar({ onNavigate }: { onNavigate: (tab: Qu
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-4 sm:items-center">
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-sm font-semibold tracking-wide text-slate-800">EMERGENCY SOS</h3>
+              <h3 className="text-sm font-semibold tracking-wide text-slate-800">{t("emergencySosModalTitle")}</h3>
               <button onClick={() => setSosOpen(false)} className="text-slate-400 hover:text-slate-700">
                 <X className="h-4 w-4" />
               </button>

@@ -5,9 +5,11 @@ import { MapContainer, TileLayer, Polygon, Polyline, Marker, Popup, CircleMarker
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { HazardScenario, Settlement, Infrastructure } from "@/lib/types";
-import type { Shelter, EmergencyService, Ambulance } from "@/lib/emergencyTypes";
+import type { Shelter, EmergencyService, Ambulance, AmbulanceStatus } from "@/lib/emergencyTypes";
+import type { TranslationKey } from "@/lib/i18n/en";
 import { buildPriorityZones } from "@/lib/emergencyData";
 import { DEFAULT_LAYERS, type MapLayerToggles } from "@/lib/mapLayers";
+import { useLanguage } from "@/lib/i18n";
 
 const INFRA_EMOJI: Record<Infrastructure["type"], string> = {
   road: "🛣️",
@@ -31,11 +33,18 @@ const PRIORITY_COLOR: Record<number, string> = {
   4: "#16a34a",
 };
 
+const AMBULANCE_STATUS_LABEL_KEY: Record<AmbulanceStatus, TranslationKey> = {
+  AVAILABLE: "ambulanceStatusAvailable",
+  EN_ROUTE: "ambulanceStatusEnRoute",
+  UNAVAILABLE: "ambulanceStatusUnavailable",
+};
+
 function googleMapsUrl(position: [number, number]): string {
   return `https://www.google.com/maps/search/?api=1&query=${position[0]},${position[1]}`;
 }
 
 function MapsLink({ position }: { position: [number, number] }) {
+  const { t } = useLanguage();
   return (
     <a
       href={googleMapsUrl(position)}
@@ -43,7 +52,7 @@ function MapsLink({ position }: { position: [number, number] }) {
       rel="noopener noreferrer"
       className="mt-1.5 inline-block rounded bg-teal-600 px-2 py-1 text-[11px] font-semibold text-white no-underline hover:bg-teal-700"
     >
-      OPEN IN GOOGLE MAPS
+      {t("openInGoogleMaps")}
     </a>
   );
 }
@@ -93,6 +102,7 @@ export default function HazardMap({
   services = [],
   ambulances = [],
 }: HazardMapProps) {
+  const { t } = useLanguage();
   const [progress, setProgress] = useState(0);
   const [simulating, setSimulating] = useState(false);
 
@@ -125,7 +135,7 @@ export default function HazardMap({
 
   const { drawn, tip } = interpolatePath(scenario.impactPath, progress);
   const selectedSettlement = scenario.settlements.find((s) => s.id === selectedSettlementId) ?? null;
-  const priorityZones = buildPriorityZones(scenario);
+  const priorityZones = buildPriorityZones(scenario, t);
 
   return (
     <MapContainer center={scenario.region.center} zoom={12} className="h-full w-full" scrollWheelZoom>
@@ -191,7 +201,7 @@ export default function HazardMap({
 
       <Marker position={scenario.impactPath[0]} icon={emojiIcon("🏔️", 30)}>
         <Popup>
-          Mountain / source zone — demo marker
+          {t("mapMountainSourceZone")}
           <br />
           <MapsLink position={scenario.impactPath[0]} />
         </Popup>
@@ -235,7 +245,7 @@ export default function HazardMap({
             <Popup>
               <strong>{sh.name}</strong>
               <br />
-              {sh.isOpen ? `${sh.capacity - sh.occupied} spaces available` : "Currently closed"}
+              {sh.isOpen ? t("mapSpacesAvailable", { count: sh.capacity - sh.occupied }) : t("mapCurrentlyClosed")}
               <br />
               <MapsLink position={sh.position} />
             </Popup>
@@ -292,7 +302,7 @@ export default function HazardMap({
         ambulances.map((a) => (
           <Marker key={a.id} position={a.position} icon={emojiIcon("🚑", 20)}>
             <Popup>
-              {a.name} — {a.status}
+              {a.name} — {t(AMBULANCE_STATUS_LABEL_KEY[a.status])}
               <br />
               <MapsLink position={a.position} />
             </Popup>

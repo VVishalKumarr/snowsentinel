@@ -3,23 +3,32 @@
 import { useState } from "react";
 import { Hospital, Shield, Flame, Building2, PhoneCall, Navigation } from "lucide-react";
 import { getEmergencyServices, DEMO_SYNC_TIME } from "@/lib/emergencyData";
-import type { EmergencyServiceType } from "@/lib/emergencyTypes";
+import type { EmergencyServiceType, EmergencyServiceStatus } from "@/lib/emergencyTypes";
 import { useScenario } from "@/lib/ScenarioContext";
+import { useLanguage } from "@/lib/i18n";
+import type { TranslationKey } from "@/lib/i18n/en";
 
-const TYPE_META: Record<EmergencyServiceType, { label: string; icon: typeof Hospital; emoji: string }> = {
-  hospital: { label: "Hospital", icon: Hospital, emoji: "🏥" },
-  police: { label: "Police", icon: Shield, emoji: "👮" },
-  fire: { label: "Fire Brigade", icon: Flame, emoji: "🚒" },
-  ambulance: { label: "Ambulance Service", icon: Building2, emoji: "🚑" },
-  response_center: { label: "Response Center", icon: Building2, emoji: "🏢" },
+const TYPE_META: Record<EmergencyServiceType, { labelKey: TranslationKey; icon: typeof Hospital; emoji: string }> = {
+  hospital: { labelKey: "serviceTypeHospital", icon: Hospital, emoji: "🏥" },
+  police: { labelKey: "serviceTypePolice", icon: Shield, emoji: "👮" },
+  fire: { labelKey: "serviceTypeFire", icon: Flame, emoji: "🚒" },
+  ambulance: { labelKey: "serviceTypeAmbulance", icon: Building2, emoji: "🚑" },
+  response_center: { labelKey: "serviceTypeResponseCenter", icon: Building2, emoji: "🏢" },
 };
 
-const FILTERS: { id: EmergencyServiceType | "all"; label: string }[] = [
-  { id: "all", label: "All" },
-  { id: "hospital", label: "🏥 Hospitals" },
-  { id: "police", label: "👮 Police" },
-  { id: "fire", label: "🚒 Fire" },
-  { id: "response_center", label: "🏢 Response Centers" },
+const STATUS_LABEL_KEY: Record<EmergencyServiceStatus, TranslationKey> = {
+  OPEN_24_7: "serviceStatusOpen247",
+  OPEN_8_TO_8: "serviceStatusOpen8to8",
+  STAFFED: "serviceStatusStaffed",
+  OPERATIONAL: "serviceStatusOperational",
+};
+
+const FILTERS: { id: EmergencyServiceType | "all"; labelKey: TranslationKey }[] = [
+  { id: "all", labelKey: "filterAll" },
+  { id: "hospital", labelKey: "filterHospitals" },
+  { id: "police", labelKey: "filterPolice" },
+  { id: "fire", labelKey: "filterFire" },
+  { id: "response_center", labelKey: "filterResponseCenters" },
 ];
 
 function directionsUrl(position: [number, number]) {
@@ -28,6 +37,7 @@ function directionsUrl(position: [number, number]) {
 
 export default function NearbyHelpList() {
   const { scenario } = useScenario();
+  const { t } = useLanguage();
   const [filter, setFilter] = useState<EmergencyServiceType | "all">("all");
 
   const services = getEmergencyServices(scenario.region.id)
@@ -37,12 +47,12 @@ export default function NearbyHelpList() {
   return (
     <div className="glass-panel rounded-2xl p-4 sm:p-5">
       <div className="mb-1 flex items-center justify-between">
-        <h2 className="text-sm font-semibold tracking-wide text-slate-800">NEARBY HELP</h2>
-        <span className="text-[10px] text-slate-400">Last sync: {DEMO_SYNC_TIME}</span>
+        <h2 className="text-sm font-semibold tracking-wide text-slate-800">{t("nearbyHelpTitle")}</h2>
+        <span className="text-[10px] text-slate-400">{t("nearbyHelpLastSync", { time: DEMO_SYNC_TIME })}</span>
       </div>
       <p className="mb-4 text-xs text-slate-500">
-        Demo/seeded locations for this prototype region. Architected to accept a live places or dispatch
-        API — see <code className="rounded bg-slate-100 px-1 py-0.5">lib/emergencyData.ts</code>.
+        {t("nearbyHelpDescription")}{" "}
+        <code className="rounded bg-slate-100 px-1 py-0.5">lib/emergencyData.ts</code>.
       </p>
 
       <div className="mb-4 flex flex-wrap gap-1.5">
@@ -56,7 +66,7 @@ export default function NearbyHelpList() {
                 : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
             }`}
           >
-            {f.label}
+            {t(f.labelKey)}
           </button>
         ))}
       </div>
@@ -72,13 +82,13 @@ export default function NearbyHelpList() {
                     <span>{meta.emoji}</span> {s.name}
                   </div>
                   <div className="mt-0.5 flex items-center gap-2 text-xs text-slate-500">
-                    <span>{meta.label}</span>
+                    <span>{t(meta.labelKey)}</span>
                     <span>·</span>
-                    <span className="font-mono">{s.distanceKm} km</span>
+                    <span className="font-mono">{t("distanceKm", { value: s.distanceKm })}</span>
                     {s.status && (
                       <>
                         <span>·</span>
-                        <span>{s.status}</span>
+                        <span>{t(STATUS_LABEL_KEY[s.status])}</span>
                       </>
                     )}
                   </div>
@@ -89,11 +99,11 @@ export default function NearbyHelpList() {
                       href={`tel:${s.phone}`}
                       className="flex items-center gap-1 rounded-md bg-teal-600 px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-teal-700"
                     >
-                      <PhoneCall className="h-3 w-3" /> CALL
+                      <PhoneCall className="h-3 w-3" /> {t("call")}
                     </a>
                   ) : (
                     <span className="rounded-md border border-slate-200 px-2.5 py-1.5 text-[10px] text-slate-400">
-                      Use helpline
+                      {t("useHelpline")}
                     </span>
                   )}
                   <a
@@ -102,7 +112,7 @@ export default function NearbyHelpList() {
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 rounded-md border border-slate-300 px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
                   >
-                    <Navigation className="h-3 w-3" /> DIRECTIONS
+                    <Navigation className="h-3 w-3" /> {t("directions")}
                   </a>
                 </div>
               </div>

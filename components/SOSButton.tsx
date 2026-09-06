@@ -16,6 +16,7 @@ import {
 import { useAppState } from "@/lib/AppStateContext";
 import { useAuth } from "@/lib/AuthContext";
 import { useLanguage } from "@/lib/i18n";
+import type { TranslationKey } from "@/lib/i18n/en";
 import { emergencyContacts, telHref } from "@/lib/emergencyContacts.config";
 import { isNativeSmsAvailable, sendNativeSms, buildSmsComposeHref, cleanPhoneNumber } from "@/lib/nativeSms";
 
@@ -55,17 +56,20 @@ function getLocation(): Promise<{ lat: number; lng: number } | null> {
   });
 }
 
-function buildMessage(location: { lat: number; lng: number } | null): string {
+function buildMessage(
+  location: { lat: number; lng: number } | null,
+  t: (key: TranslationKey, vars?: Record<string, string | number>) => string
+): string {
   const mapsLink = location
     ? `https://www.google.com/maps/search/?api=1&query=${location.lat},${location.lng}`
-    : "Location unavailable";
+    : t("sosMessageLocationUnavailable");
   return [
-    "🚨 SOS ALERT — I MAY NEED HELP.",
+    t("sosMessageAlert"),
     "",
-    "My current location:",
+    t("sosMessageLocationLabel"),
     mapsLink,
     "",
-    "Please contact me or emergency services if necessary.",
+    t("sosMessageFooter"),
   ].join("\n");
 }
 
@@ -175,7 +179,7 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
   };
 
   const shareVia = async (channel: ShareChannel) => {
-    const message = buildMessage(location);
+    const message = buildMessage(location, t);
     const chosen = recipients.filter((r) => selected.has(r.id));
     const numbers = chosen.map((r) => cleanPhoneNumber(r.phoneNumber ?? "")).filter((n): n is string => !!n);
     const recipientUserIds = chosen.map((r) => r.userId).filter((id): id is number => typeof id === "number");
@@ -246,7 +250,7 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
       const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
       if (canShare) {
         try {
-          await navigator.share({ title: "SOS Alert", text: message });
+          await navigator.share({ title: t("sosShareTitle"), text: message });
           finish("SHARED", channel);
         } catch {
           finish("CANCELLED", channel);
@@ -358,7 +362,7 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
   }
 
   if (step === "result" && result) {
-    const message = buildMessage(location);
+    const message = buildMessage(location, t);
     return (
       <div className="w-full max-w-sm space-y-3 text-center">
         <div

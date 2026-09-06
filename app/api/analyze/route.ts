@@ -15,12 +15,12 @@ export async function POST(req: NextRequest) {
 
   const scenario = getScenario(body.scenarioId ?? DEFAULT_SCENARIO_ID);
 
-  const rawFactors: Pick<RiskFactor, "key" | "label" | "score" | "description">[] =
+  const rawFactors: Pick<RiskFactor, "key" | "labelKey" | "score" | "descriptionKey">[] =
     scenario.risk.factors.map((f) => ({
       key: f.key,
-      label: f.label,
+      labelKey: f.labelKey,
       score: f.score,
-      description: f.description,
+      descriptionKey: f.descriptionKey,
     }));
 
   const risk = calculateRisk(rawFactors);
@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
     environmentalData: body.environmentalData ?? { snowIceChangePct: scenario.environmentalChange.snowIceChangePct },
     historicalRisk: body.historicalRisk ?? {},
     terrainData: body.terrainData ?? {},
+    language: body.language,
     risk,
   });
 
@@ -50,14 +51,12 @@ export async function POST(req: NextRequest) {
       settlements: scenario.simulatedStats.exposedSettlements,
       infrastructure: scenario.simulatedStats.criticalInfrastructure,
     },
-    recommendedActions: scenario.recommendedActions,
+    recommendedActions: scenario.recommendedActionKeys,
     dataSource: source,
   };
 
   return NextResponse.json({
     ...response,
     humanVerificationSteps: HUMAN_VERIFICATION_STEPS,
-    disclaimer:
-      "This prototype is not an operational avalanche prediction system. Risk assessments and impact zones are experimental simulations intended for demonstration and preparedness research.",
   });
 }

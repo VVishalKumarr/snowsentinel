@@ -28,7 +28,12 @@ const STORAGE_KEY = "snowsentinel:language";
 interface LanguageContextValue {
   language: LanguageCode;
   setLanguage: (lang: LanguageCode) => void;
-  t: (key: TranslationKey) => string;
+  t: (key: TranslationKey, vars?: Record<string, string | number>) => string;
+}
+
+function interpolate(template: string, vars?: Record<string, string | number>): string {
+  if (!vars) return template;
+  return template.replace(/\{(\w+)\}/g, (match, name) => (name in vars ? String(vars[name]) : match));
 }
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
@@ -59,7 +64,8 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     return {
       language,
       setLanguage,
-      t: (key: TranslationKey) => dict[key] ?? DICTIONARIES.en[key] ?? key,
+      t: (key: TranslationKey, vars?: Record<string, string | number>) =>
+        interpolate(dict[key] ?? DICTIONARIES.en[key] ?? key, vars),
     };
   }, [language]);
 
@@ -70,4 +76,19 @@ export function useLanguage() {
   const ctx = useContext(LanguageContext);
   if (!ctx) throw new Error("useLanguage must be used within LanguageProvider");
   return ctx;
+}
+
+// Non-hook translation for server code and plain data modules (API routes,
+// lib/ai.ts) that need a translated string but aren't React components.
+export function translate(
+  lang: LanguageCode,
+  key: TranslationKey,
+  vars?: Record<string, string | number>
+): string {
+  const dict = DICTIONARIES[lang] ?? DICTIONARIES.en;
+  return interpolate(dict[key] ?? DICTIONARIES.en[key] ?? key, vars);
+}
+
+export function isLanguageCode(value: unknown): value is LanguageCode {
+  return typeof value === "string" && value in DICTIONARIES;
 }

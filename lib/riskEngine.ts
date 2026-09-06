@@ -11,8 +11,8 @@ export const RISK_WEIGHTS: Record<RiskFactor["key"], number> = {
   terrain: 0.2,
 };
 
-export const WEIGHTING_NOTE =
-  "Prototype weighting — not scientifically validated. Weights: 30% observed change, 25% environmental conditions, 25% historical hazard, 20% terrain exposure.";
+// Translated at render time via t("riskWeightingNote") — see lib/i18n/en.ts.
+export const WEIGHTING_NOTE_KEY = "riskWeightingNote" as const;
 
 export function levelForScore(score: number): RiskLevel {
   if (score >= 80) return "HIGH";
@@ -22,7 +22,7 @@ export function levelForScore(score: number): RiskLevel {
 }
 
 export function calculateRisk(
-  rawFactors: Pick<RiskFactor, "key" | "label" | "score" | "description">[]
+  rawFactors: Pick<RiskFactor, "key" | "labelKey" | "score" | "descriptionKey">[]
 ): RiskAssessment {
   const factors: RiskFactor[] = rawFactors.map((f) => ({
     ...f,
@@ -36,7 +36,7 @@ export function calculateRisk(
     riskScore,
     riskLevel: levelForScore(riskScore),
     factors,
-    weightingNote: WEIGHTING_NOTE,
+    weightingNote: WEIGHTING_NOTE_KEY,
   };
 }
 

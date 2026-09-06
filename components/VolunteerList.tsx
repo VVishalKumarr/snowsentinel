@@ -4,16 +4,28 @@ import { useMemo, useState } from "react";
 import { HandHeart } from "lucide-react";
 import { VOLUNTEERS } from "@/lib/emergencyData";
 import type { Volunteer, VolunteerSkill } from "@/lib/emergencyTypes";
+import type { TranslationKey } from "@/lib/i18n/en";
+import { useLanguage } from "@/lib/i18n";
 
 const ALL_SKILLS: VolunteerSkill[] = [
-  "First Aid",
-  "Search & Rescue",
-  "Transport",
-  "Food",
-  "Logistics",
-  "Translation",
-  "Shelter Support",
+  "FIRST_AID",
+  "SEARCH_RESCUE",
+  "TRANSPORT",
+  "FOOD",
+  "LOGISTICS",
+  "TRANSLATION",
+  "SHELTER_SUPPORT",
 ];
+
+const SKILL_LABEL_KEY: Record<VolunteerSkill, TranslationKey> = {
+  FIRST_AID: "skillFirstAid",
+  SEARCH_RESCUE: "skillSearchRescue",
+  TRANSPORT: "skillTransport",
+  FOOD: "skillFood",
+  LOGISTICS: "skillLogistics",
+  TRANSLATION: "skillTranslation",
+  SHELTER_SUPPORT: "skillShelterSupport",
+};
 
 const STATUS_STYLE: Record<Volunteer["status"], string> = {
   AVAILABLE: "border-emerald-300 bg-emerald-50 text-emerald-700",
@@ -21,7 +33,14 @@ const STATUS_STYLE: Record<Volunteer["status"], string> = {
   OFFLINE: "border-slate-300 bg-slate-100 text-slate-500",
 };
 
+const STATUS_LABEL_KEY: Record<Volunteer["status"], TranslationKey> = {
+  AVAILABLE: "volunteerStatusAvailable",
+  DEPLOYED: "volunteerStatusDeployed",
+  OFFLINE: "volunteerStatusOffline",
+};
+
 export default function VolunteerList() {
+  const { t } = useLanguage();
   const [skillFilter, setSkillFilter] = useState<VolunteerSkill | null>(null);
 
   const volunteers = useMemo(
@@ -33,12 +52,10 @@ export default function VolunteerList() {
   return (
     <div className="glass-panel rounded-2xl p-4 sm:p-5">
       <div className="mb-1 flex items-center justify-between">
-        <h2 className="text-sm font-semibold tracking-wide text-slate-800">COMMUNITY VOLUNTEERS</h2>
-        <span className="text-[10px] text-slate-500">{availableCount} available (demo)</span>
+        <h2 className="text-sm font-semibold tracking-wide text-slate-800">{t("communityVolunteersTitle")}</h2>
+        <span className="text-[10px] text-slate-500">{t("volunteersAvailableDemo", { count: availableCount })}</span>
       </div>
-      <p className="mb-4 text-xs text-slate-500">
-        Anonymous IDs only — exact volunteer locations are never shown publicly, per privacy design.
-      </p>
+      <p className="mb-4 text-xs text-slate-500">{t("volunteerListDescription")}</p>
 
       <div className="mb-4 flex flex-wrap gap-1.5">
         <button
@@ -47,7 +64,7 @@ export default function VolunteerList() {
             !skillFilter ? "border-teal-300 bg-teal-50 text-teal-700" : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
           }`}
         >
-          All skills
+          {t("allSkillsFilter")}
         </button>
         {ALL_SKILLS.map((skill) => (
           <button
@@ -59,7 +76,7 @@ export default function VolunteerList() {
                 : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
             }`}
           >
-            {skill}
+            {t(SKILL_LABEL_KEY[skill])}
           </button>
         ))}
       </div>
@@ -69,29 +86,27 @@ export default function VolunteerList() {
           <div key={v.id} className="rounded-xl border border-slate-200 bg-white p-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-800">
-                <HandHeart className="h-4 w-4 text-teal-600" /> VOLUNTEER {v.id}
+                <HandHeart className="h-4 w-4 text-teal-600" /> {t("volunteerPrefix", { id: v.id })}
               </div>
               <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLE[v.status]}`}>
-                {v.status}
+                {t(STATUS_LABEL_KEY[v.status])}
               </span>
             </div>
             <div className="mt-2 text-xs text-slate-500">
-              <div className="text-[10px] text-slate-400">Area</div>
+              <div className="text-[10px] text-slate-400">{t("fieldArea")}</div>
               <div className="text-slate-700">{v.area}</div>
             </div>
             <div className="mt-2 flex flex-wrap gap-1">
               {v.skills.map((s) => (
                 <span key={s} className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
-                  {s}
+                  {t(SKILL_LABEL_KEY[s])}
                 </span>
               ))}
             </div>
           </div>
         ))}
         {volunteers.length === 0 && (
-          <p className="col-span-full py-6 text-center text-xs text-slate-400">
-            No volunteers match this skill filter.
-          </p>
+          <p className="col-span-full py-6 text-center text-xs text-slate-400">{t("noVolunteersMatch")}</p>
         )}
       </div>
     </div>

@@ -10,21 +10,23 @@
 import { useEffect, useRef, useState } from "react";
 import { useScenario } from "./ScenarioContext";
 import type { DashboardTab } from "./dashboardTabs";
+import { useLanguage } from "./i18n";
+import type { TranslationKey } from "./i18n/en";
 
 interface Step {
   tab: DashboardTab;
-  message: string;
+  messageKey: TranslationKey;
   delayMs: number; // time to stay on the previous step before advancing to this one
 }
 
 const STEPS: Step[] = [
-  { tab: "satellite", message: "Satellite anomaly appears…", delayMs: 8000 },
-  { tab: "risk", message: "Risk score increasing…", delayMs: 8000 },
-  { tab: "impact", message: "Priority zones activating, hazard path rendering…", delayMs: 10000 },
-  { tab: "shelters", message: "Nearby shelters highlighted…", delayMs: 8000 },
-  { tab: "help", message: "Available emergency resources appearing…", delayMs: 8000 },
-  { tab: "family", message: "Family safety panel updating…", delayMs: 8000 },
-  { tab: "emergency", message: "Preparedness alert issued. You can trigger SOS now.", delayMs: 8000 },
+  { tab: "satellite", messageKey: "simStepSatellite", delayMs: 8000 },
+  { tab: "risk", messageKey: "simStepRisk", delayMs: 8000 },
+  { tab: "impact", messageKey: "simStepImpact", delayMs: 10000 },
+  { tab: "shelters", messageKey: "simStepShelters", delayMs: 8000 },
+  { tab: "help", messageKey: "simStepHelp", delayMs: 8000 },
+  { tab: "family", messageKey: "simStepFamily", delayMs: 8000 },
+  { tab: "emergency", messageKey: "simStepEmergency", delayMs: 8000 },
 ];
 
 export function useDisasterSimulation(
@@ -32,6 +34,7 @@ export function useDisasterSimulation(
   onTriggerImpactSimulation: () => void
 ) {
   const { scenario, setScenarioId } = useScenario();
+  const { t } = useLanguage();
   const [running, setRunning] = useState(false);
   const [stepIndex, setStepIndex] = useState(-1);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -67,7 +70,7 @@ export function useDisasterSimulation(
 
   return {
     running,
-    message: stepIndex >= 0 ? STEPS[stepIndex].message : null,
+    message: stepIndex >= 0 ? t(STEPS[stepIndex].messageKey) : null,
     run,
     stop,
   };

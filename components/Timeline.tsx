@@ -1,6 +1,10 @@
+"use client";
+
 import type { TimelinePoint } from "@/lib/types";
+import { useLanguage } from "@/lib/i18n";
 
 export default function Timeline({ points }: { points: TimelinePoint[] }) {
+  const { t } = useLanguage();
   const max = 100;
   return (
     <div className="relative flex items-end justify-between gap-2">
@@ -11,12 +15,12 @@ export default function Timeline({ points }: { points: TimelinePoint[] }) {
             <div
               className="w-2.5 rounded-t-sm bg-teal-500 transition-all"
               style={{ height: `${(p.snowIceIndex / max) * 100}%` }}
-              title={`Snow/Ice index: ${p.snowIceIndex}`}
+              title={t("snowIceIndexTooltip", { value: p.snowIceIndex })}
             />
             <div
               className="w-2.5 rounded-t-sm bg-slate-300 transition-all"
               style={{ height: `${(p.surfaceIndex / max) * 100}%` }}
-              title={`Surface index: ${p.surfaceIndex}`}
+              title={t("surfaceIndexTooltip", { value: p.surfaceIndex })}
             />
           </div>
           <div className="h-1.5 w-1.5 rounded-full bg-teal-600 ring-4 ring-white" />

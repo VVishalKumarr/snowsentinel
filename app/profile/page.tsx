@@ -16,7 +16,7 @@ function ProfileContent() {
   const { language, t } = useLanguage();
   const router = useRouter();
 
-  const currentLangLabel = LANGUAGES.find((l) => l.code === language)?.label ?? "English";
+  const currentLangLabel = LANGUAGES.find((l) => l.code === language)?.label ?? LANGUAGES[0].label;
 
   const handleLogout = async () => {
     await logout();
@@ -61,7 +61,7 @@ function ProfileContent() {
             </div>
           </dl>
 
-          <p className="mt-2 text-[11px] text-slate-400">Current: {currentLangLabel}</p>
+          <p className="mt-2 text-[11px] text-slate-400">{t("currentLanguagePrefix", { lang: currentLangLabel })}</p>
 
           <div className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-2">
             <Link
@@ -86,11 +86,7 @@ function ProfileContent() {
           </button>
         </div>
 
-        <p className="mt-4 text-center text-[11px] text-slate-400">
-          Your account only stores your name, username, and family connections you explicitly approve.
-          Your password is never stored in plain text. See the Trust &amp; Limitations section in the
-          Emergency tab for what this prototype does and doesn&apos;t do.
-        </p>
+        <p className="mt-4 text-center text-[11px] text-slate-400">{t("profileDisclaimer")}</p>
       </main>
     </div>
   );

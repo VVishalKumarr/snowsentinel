@@ -65,7 +65,7 @@ function DashboardInner() {
               <span className="h-2 w-2 rounded-full bg-emerald-500 pulse-dot" /> {t("systemMonitoring")}
             </span>
             <span className="flex items-center gap-1.5">
-              <MapPin className="h-3.5 w-3.5" /> {scenario.region.shortName} (Demo Himalayan Region)
+              <MapPin className="h-3.5 w-3.5" /> {scenario.region.shortName} {t("demoHimalayanRegion")}
             </span>
           </div>
           <ConnectionIndicator />
@@ -87,12 +87,12 @@ function DashboardInner() {
 
         {simulation.running && tab !== "overview" && (
           <div className="flex items-center justify-center gap-3 border-t border-teal-200 bg-teal-50 px-4 py-1.5 text-center text-[11px] font-medium text-teal-700 sm:px-6">
-            <span>▶ DISASTER SIMULATION RUNNING — {simulation.message ?? "starting…"}</span>
+            <span>{t("simulationRunningPrefix", { message: simulation.message ?? t("simulationStarting") })}</span>
             <button
               onClick={simulation.stop}
               className="rounded border border-teal-300 bg-white px-2 py-0.5 text-[10px] font-semibold text-teal-700 hover:bg-teal-100"
             >
-              STOP
+              {t("stopSimulation")}
             </button>
           </div>
         )}
@@ -182,7 +182,7 @@ function DashboardInner() {
             <AlertCenter scenario={scenario} />
             <div className="glass-panel flex flex-col items-center gap-4 rounded-2xl p-6">
               <div className="flex items-center gap-2 text-sm font-semibold tracking-wide text-slate-800">
-                <Siren className="h-4 w-4 text-red-600" /> ONE-TAP SOS
+                <Siren className="h-4 w-4 text-red-600" /> {t("oneTapSosTitle")}
               </div>
               <SOSButton />
             </div>
@@ -199,16 +199,21 @@ function DashboardInner() {
 
       <footer className="hidden border-t border-slate-200 py-6 text-center text-[11px] text-slate-400 sm:block">
         <PhoneCall className="mr-1 inline h-3 w-3" />
-        SnowSentinel is a hackathon prototype — not a substitute for official emergency services.
+        {t("dashboardDisclaimer")}
       </footer>
     </div>
   );
 }
 
+function DashboardLoadingFallback() {
+  const { t } = useLanguage();
+  return <div className="p-8 text-sm text-slate-500">{t("loadingDashboard")}</div>;
+}
+
 export default function DashboardPage() {
   return (
     <AuthGuard>
-      <Suspense fallback={<div className="p-8 text-sm text-slate-500">Loading dashboard…</div>}>
+      <Suspense fallback={<DashboardLoadingFallback />}>
         <DashboardInner />
       </Suspense>
     </AuthGuard>

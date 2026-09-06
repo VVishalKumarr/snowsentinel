@@ -1,6 +1,9 @@
+"use client";
+
 import { AlertOctagon } from "lucide-react";
 import type { HazardScenario } from "@/lib/types";
 import { generateAnomalies, RIDGE_BACK, RIDGE_MID, RIDGE_FRONT, SNOW_CAP_FULL } from "@/lib/satelliteArt";
+import { useLanguage } from "@/lib/i18n";
 
 export type ViewerVariant = "current" | "previous" | "compare";
 
@@ -11,6 +14,7 @@ interface SatelliteViewerProps {
 }
 
 export default function SatelliteViewer({ scenario, variant, compact = false }: SatelliteViewerProps) {
+  const { t } = useLanguage();
   const changePct = scenario.environmentalChange.snowIceChangePct;
   const showAnomalies = variant === "current" || variant === "compare";
   const showDiffRings = variant === "compare";
@@ -18,8 +22,9 @@ export default function SatelliteViewer({ scenario, variant, compact = false }: 
 
   const dateLabel =
     variant === "previous" ? scenario.observationPrevious.date : scenario.observationCurrent.date;
-  const obsLabel =
-    variant === "previous" ? "PREVIOUS OBSERVATION" : variant === "current" ? "CURRENT OBSERVATION" : "CHANGE COMPARISON";
+  const obsLabel = t(
+    variant === "previous" ? "previousObservationLabel" : variant === "current" ? "currentObservationLabel" : "changeComparisonLabel"
+  );
 
   return (
     <div className={`relative w-full overflow-hidden rounded-xl border border-slate-200 bg-[#060b12] shadow-sm ${compact ? "aspect-[4/3]" : "aspect-[16/9]"}`}>
@@ -113,12 +118,12 @@ export default function SatelliteViewer({ scenario, variant, compact = false }: 
       {/* HUD */}
       <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1">
         <AlertOctagon className="h-3 w-3 text-amber-400" strokeWidth={2} />
-        <span className="text-[9px] font-semibold tracking-[0.1em] text-amber-300">DEMO OBSERVATION</span>
+        <span className="text-[9px] font-semibold tracking-[0.1em] text-amber-300">{t("demoObservationBadge")}</span>
       </div>
 
       {showDiffRings && (
         <div className="absolute right-3 top-3 rounded-md border border-red-500/40 bg-red-500/10 px-2 py-1">
-          <span className="text-[9px] font-semibold tracking-[0.1em] text-red-300">CHANGE LAYER ACTIVE</span>
+          <span className="text-[9px] font-semibold tracking-[0.1em] text-red-300">{t("changeLayerActiveBadge")}</span>
         </div>
       )}
 
@@ -131,7 +136,7 @@ export default function SatelliteViewer({ scenario, variant, compact = false }: 
         <div className="font-mono text-[10px] text-slate-500">
           {scenario.region.center[0].toFixed(2)}°N {scenario.region.center[1].toFixed(2)}°E
         </div>
-        <div className="text-[9px] tracking-wide text-slate-600">SYNTHETIC RENDER · NOT LIVE IMAGERY</div>
+        <div className="text-[9px] tracking-wide text-slate-600">{t("syntheticRenderNote")}</div>
       </div>
     </div>
   );

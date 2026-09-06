@@ -3,6 +3,8 @@
 // demo/synthetic unless explicitly wired to a live source — see
 // lib/emergencyData.ts and each feature's "DEMO DATA" labeling in the UI.
 
+import type { TranslationKey } from "./i18n/en";
+
 export type SyncStatus = "LIVE" | "DEMO" | "CACHED";
 
 export interface MountainRegion {
@@ -11,6 +13,12 @@ export interface MountainRegion {
   center: [number, number];
 }
 
+export type AccessibilityCode =
+  | "WHEELCHAIR_GROUND_FLOOR"
+  | "STAIRS_ONLY"
+  | "WHEELCHAIR_ACCESSIBLE"
+  | "STAIRS_ONLY_NO_WHEELCHAIR";
+
 export interface Shelter {
   id: string;
   name: string;
@@ -18,13 +26,14 @@ export interface Shelter {
   distanceKm: number;
   capacity: number;
   occupied: number;
-  accessibility: string;
+  accessibility: AccessibilityCode;
   isOpen: boolean;
   lastSynced: string;
   source: SyncStatus;
 }
 
 export type EmergencyServiceType = "hospital" | "police" | "fire" | "ambulance" | "response_center";
+export type EmergencyServiceStatus = "OPEN_24_7" | "OPEN_8_TO_8" | "STAFFED" | "OPERATIONAL";
 
 export interface EmergencyService {
   id: string;
@@ -32,7 +41,7 @@ export interface EmergencyService {
   type: EmergencyServiceType;
   position: [number, number];
   distanceKm: number;
-  status?: string;
+  status?: EmergencyServiceStatus;
   phone?: string;
   lastSynced: string;
   source: SyncStatus;
@@ -52,13 +61,13 @@ export interface Ambulance {
 }
 
 export type VolunteerSkill =
-  | "First Aid"
-  | "Search & Rescue"
-  | "Transport"
-  | "Food"
-  | "Logistics"
-  | "Translation"
-  | "Shelter Support";
+  | "FIRST_AID"
+  | "SEARCH_RESCUE"
+  | "TRANSPORT"
+  | "FOOD"
+  | "LOGISTICS"
+  | "TRANSLATION"
+  | "SHELTER_SUPPORT";
 
 export interface Volunteer {
   id: string;
@@ -88,8 +97,8 @@ export interface TrustedContact {
 export interface EmergencyContactConfig {
   category: string;
   number: string;
-  label: string;
-  description?: string;
+  labelKey: TranslationKey;
+  descriptionKey?: TranslationKey;
   emoji?: string;
 }
 
@@ -129,16 +138,16 @@ export interface PriorityZone {
   settlementId: string;
   settlementName: string;
   risk: "HIGH" | "MODERATE" | "LOW";
-  populationExposure: "High" | "Moderate" | "Low";
+  populationExposure: "HIGH" | "MODERATE" | "LOW";
   nearestShelterKm: number;
   nearestHospitalKm: number;
   roadAccessible: boolean;
   recommendedResponse: string;
 }
 
-export const PRIORITY_LABEL: Record<PriorityLevel, string> = {
-  1: "PRIORITY 1 — Immediate attention",
-  2: "PRIORITY 2 — High monitoring",
-  3: "PRIORITY 3 — Preparedness",
-  4: "LOWER PRIORITY",
+export const PRIORITY_LABEL_KEY: Record<PriorityLevel, TranslationKey> = {
+  1: "priorityLabel1",
+  2: "priorityLabel2",
+  3: "priorityLabel3",
+  4: "priorityLabel4",
 };

@@ -63,14 +63,14 @@ const STATUS_META: Record<
   NOT_CHECKED_IN: { icon: CircleDashed, className: "border-slate-300 bg-slate-100 text-slate-500" },
 };
 
-function timeAgo(iso: string | null): string {
-  if (!iso) return "never";
+function timeAgo(iso: string | null, t: (key: TranslationKey, vars?: Record<string, string | number>) => string): string {
+  if (!iso) return t("familyTimeNever");
   const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins} min ago`;
+  if (mins < 1) return t("familyTimeJustNow");
+  if (mins < 60) return t("familyTimeMinAgo", { count: mins });
   const hours = Math.round(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.round(hours / 24)}d ago`;
+  if (hours < 24) return t("familyTimeHoursAgo", { count: hours });
+  return t("familyTimeDaysAgo", { count: Math.round(hours / 24) });
 }
 
 export default function FamilyNetworkPanel() {
@@ -244,7 +244,7 @@ export default function FamilyNetworkPanel() {
           </div>
           {needsHelpMembers.map((m) => (
             <div key={m.connectionId} className="mt-2 flex flex-wrap items-center justify-between gap-2 text-sm text-red-700">
-              <span>&ldquo;{m.name} has requested assistance.&rdquo;</span>
+              <span>&ldquo;{t("familyNeedsAssistanceMessage", { name: m.name })}&rdquo;</span>
               <div className="flex gap-2">
                 {m.location && (
                   <a
@@ -293,7 +293,7 @@ export default function FamilyNetworkPanel() {
             {incomingCheckIns.map((c) => (
               <div key={c.connectionId} className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs">
                 <p className="mb-2 text-amber-800">
-                  <strong>{c.fromName}</strong> requested a safety check-in from you.
+                  <strong>{c.fromName}</strong> {t("familyCheckinRequestMessage")}
                 </p>
                 <div className="flex gap-2">
                   <button
@@ -342,7 +342,7 @@ export default function FamilyNetworkPanel() {
         )}
 
         {!loading && members.length === 0 && (
-          <p className="mb-4 text-xs text-slate-400">No family members yet — add one below.</p>
+          <p className="mb-4 text-xs text-slate-400">{t("familyNoMembersYet")}</p>
         )}
 
         <div className="space-y-2">
@@ -355,7 +355,7 @@ export default function FamilyNetworkPanel() {
                   <div>
                     <div className="text-sm font-semibold text-slate-800">{m.name}</div>
                     <div className="text-[11px] text-slate-500">
-                      @{m.username} · {m.relationship || "Family"}
+                      @{m.username} · {m.relationship || t("familyDefaultRelationship")}
                     </div>
                   </div>
                   <span className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${meta.className}`}>
@@ -363,7 +363,7 @@ export default function FamilyNetworkPanel() {
                   </span>
                 </div>
                 <div className="mt-1.5 text-[11px] text-slate-400">
-                  {t("familyLastCheckIn")}: {timeAgo(m.lastCheckIn)}
+                  {t("familyLastCheckIn")}: {timeAgo(m.lastCheckIn, t)}
                 </div>
                 <div className="mt-2 flex gap-2">
                   <button
@@ -416,7 +416,7 @@ export default function FamilyNetworkPanel() {
             <input
               value={relationship}
               onChange={(e) => setRelationship(e.target.value)}
-              placeholder="Relationship (e.g. Brother)"
+              placeholder={t("familyRelationshipPlaceholder")}
               className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-teal-400"
             />
             <button

@@ -10,6 +10,10 @@
 // anything beyond a demo. To configure a different country, replace the
 // entries below; leave `number` empty to show "Not configured" instead of
 // guessing.
+//
+// Labels/descriptions are TranslationKey references (see lib/i18n/en.ts) so
+// the helpline UI renders in whichever language the user has selected —
+// only the phone numbers themselves stay untranslated.
 
 import type { EmergencyContactConfig } from "./emergencyTypes";
 
@@ -17,67 +21,67 @@ export const emergencyContacts: EmergencyContactConfig[] = [
   {
     category: "Emergency",
     number: "112",
-    label: "National Emergency",
-    description: "Police / Fire / Medical emergency — India's single emergency number (ERSS)",
+    labelKey: "contactNationalEmergency",
+    descriptionKey: "contactNationalEmergencyDesc",
     emoji: "🚨",
   },
   {
     category: "Police",
     number: "112",
-    label: "Police",
-    description: "Routed through the National Emergency Number",
+    labelKey: "contactPolice",
+    descriptionKey: "contactPoliceDesc",
     emoji: "👮",
   },
   {
     category: "Fire Brigade",
     number: "101",
-    label: "Fire Brigade",
+    labelKey: "contactFireBrigade",
     emoji: "🔥",
   },
   {
     category: "Ambulance",
     number: "108",
-    label: "Ambulance",
-    description: "Emergency ambulance service",
+    labelKey: "contactAmbulance",
+    descriptionKey: "contactAmbulanceDesc",
     emoji: "🚑",
   },
   {
     category: "Ambulance / Patient Transport",
     number: "102",
-    label: "Ambulance / Patient Transport",
-    description: "Non-emergency patient transport (availability varies by state)",
+    labelKey: "contactAmbulanceTransport",
+    descriptionKey: "contactAmbulanceTransportDesc",
     emoji: "🚑",
   },
   {
     category: "Disaster Management",
     number: "1078",
-    label: "Disaster Management",
-    description: "NDMA — National Disaster Management Authority",
+    labelKey: "contactDisasterManagement",
+    descriptionKey: "contactDisasterManagementDesc",
     emoji: "🏛",
   },
   {
     category: "NDMA Control Room",
     number: "011-26701728",
-    label: "NDMA Control Room",
-    description: "National Disaster Management Authority control room (landline)",
+    labelKey: "contactNdmaControlRoom",
+    descriptionKey: "contactNdmaControlRoomDesc",
     emoji: "🏛",
   },
   {
     category: "Women Helpline",
     number: "181",
-    label: "Women Helpline",
+    labelKey: "contactWomenHelpline",
     emoji: "🆘",
   },
   {
     category: "Cyber Crime",
     number: "1930",
-    label: "Cyber Crime",
+    labelKey: "contactCyberCrime",
     emoji: "💻",
   },
   {
     category: "Child Helpline",
     number: "1098",
-    label: "Child Helpline",
+    labelKey: "contactChildHelpline",
     emoji: "🧒",
   },
 ];

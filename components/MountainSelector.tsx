@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { ChevronDown, Calendar, MapPin, FlaskConical } from "lucide-react";
 import { useScenario } from "@/lib/ScenarioContext";
 import { REGIONS } from "@/lib/demoData";
+import { useLanguage } from "@/lib/i18n";
 
 function ControlBlock({
   icon: Icon,
@@ -27,10 +28,11 @@ function ControlBlock({
 
 export default function MountainSelector() {
   const { scenario, scenarioId, setScenarioId, setRegionId, scenariosForCurrentRegion } = useScenario();
+  const { t } = useLanguage();
 
   return (
     <div className="glass-panel flex flex-wrap items-end gap-x-8 gap-y-4 rounded-2xl p-4 sm:p-5">
-      <ControlBlock icon={MapPin} label="REGION">
+      <ControlBlock icon={MapPin} label={t("controlRegion")}>
         <div className="relative">
           <select
             value={scenario.region.id}
@@ -47,19 +49,19 @@ export default function MountainSelector() {
         </div>
       </ControlBlock>
 
-      <ControlBlock icon={Calendar} label="OBSERVATION">
+      <ControlBlock icon={Calendar} label={t("controlObservation")}>
         <div className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-800">
-          Current
+          {t("controlObservationCurrent")}
         </div>
       </ControlBlock>
 
-      <ControlBlock icon={Calendar} label="DATE">
+      <ControlBlock icon={Calendar} label={t("controlDate")}>
         <div className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-mono text-sm text-teal-700">
           {scenario.observationCurrent.date}
         </div>
       </ControlBlock>
 
-      <ControlBlock icon={FlaskConical} label="DEMO SCENARIO">
+      <ControlBlock icon={FlaskConical} label={t("controlDemoScenario")}>
         <div className="relative">
           <select
             value={scenarioId}
@@ -68,7 +70,7 @@ export default function MountainSelector() {
           >
             {scenariosForCurrentRegion.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.name}
+                {t(s.nameKey)}
               </option>
             ))}
           </select>

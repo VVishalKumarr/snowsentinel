@@ -3,21 +3,28 @@
 import { Info, Eye, TriangleAlert, Flame, CheckCircle2 } from "lucide-react";
 import type { HazardScenario } from "@/lib/types";
 import type { AlertType } from "@/lib/emergencyTypes";
+import type { TranslationKey } from "@/lib/i18n/en";
 import { buildAlertForScenario } from "@/lib/emergencyData";
 import { useAppState } from "@/lib/AppStateContext";
 import { useLanguage } from "@/lib/i18n";
 
-const TYPE_META: Record<AlertType, { icon: typeof Info; className: string }> = {
-  INFO: { icon: Info, className: "border-slate-300 bg-slate-50 text-slate-700" },
-  WATCH: { icon: Eye, className: "border-amber-300 bg-amber-50 text-amber-800" },
-  WARNING: { icon: TriangleAlert, className: "border-orange-300 bg-orange-50 text-orange-800" },
-  CRITICAL: { icon: Flame, className: "border-red-300 bg-red-50 text-red-800" },
+const TYPE_META: Record<AlertType, { icon: typeof Info; className: string; labelKey: TranslationKey }> = {
+  INFO: { icon: Info, className: "border-slate-300 bg-slate-50 text-slate-700", labelKey: "alertTypeInfo" },
+  WATCH: { icon: Eye, className: "border-amber-300 bg-amber-50 text-amber-800", labelKey: "alertTypeWatch" },
+  WARNING: { icon: TriangleAlert, className: "border-orange-300 bg-orange-50 text-orange-800", labelKey: "alertTypeWarning" },
+  CRITICAL: { icon: Flame, className: "border-red-300 bg-red-50 text-red-800", labelKey: "alertTypeCritical" },
+};
+
+const CONFIDENCE_LABEL_KEY: Record<"LOW" | "MODERATE" | "HIGH", TranslationKey> = {
+  LOW: "confidenceLow",
+  MODERATE: "confidenceModerate",
+  HIGH: "confidenceHigh",
 };
 
 export default function AlertCenter({ scenario }: { scenario: HazardScenario }) {
   const { acknowledgedAlertIds, acknowledgeAlert } = useAppState();
   const { t } = useLanguage();
-  const alert = buildAlertForScenario(scenario);
+  const alert = buildAlertForScenario(scenario, t);
   const meta = TYPE_META[alert.type];
   const Icon = meta.icon;
   const acknowledged = acknowledgedAlertIds.includes(alert.id);
@@ -28,7 +35,7 @@ export default function AlertCenter({ scenario }: { scenario: HazardScenario }) 
         <div className="flex items-center gap-2">
           <Icon className="h-5 w-5" />
           <h2 className="text-sm font-semibold tracking-wide">
-            {alert.type} — {alert.title.toUpperCase()}
+            {t(meta.labelKey)} — {alert.title.toUpperCase()}
           </h2>
         </div>
         {acknowledged ? (
@@ -52,7 +59,7 @@ export default function AlertCenter({ scenario }: { scenario: HazardScenario }) 
         <Field label={t("alertImpact")} value={alert.impact} />
         <Field label={t("alertAction")} value={alert.action} />
         <Field label={t("alertSource")} value={alert.source} />
-        <Field label={t("alertConfidence")} value={alert.confidence} />
+        <Field label={t("alertConfidence")} value={t(CONFIDENCE_LABEL_KEY[alert.confidence])} />
       </dl>
     </div>
   );

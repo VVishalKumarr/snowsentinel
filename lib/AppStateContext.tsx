@@ -18,6 +18,7 @@ import {
 } from "react";
 import type { FamilyMember, TrustedContact, SOSRequest, SafetyStatus } from "./emergencyTypes";
 import { DEFAULT_FAMILY_MEMBERS } from "./emergencyData";
+import { useLanguage } from "./i18n";
 
 export type ConnectionState = "ONLINE" | "LIMITED" | "OFFLINE";
 
@@ -63,6 +64,7 @@ function save<T>(key: string, value: T) {
 }
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
+  const { t } = useLanguage();
   const [hydrated, setHydrated] = useState(false);
   const [connection, setConnection] = useState<ConnectionState>("ONLINE");
   const [syncing, setSyncing] = useState(false);
@@ -175,12 +177,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         status: isOnline ? "SENT" : "QUEUED",
         recipientIds,
         location,
-        message: buildSOSMessage(location),
+        message: buildSOSMessage(location, t),
       };
       setSosQueue((prev) => [request, ...prev]);
       return request;
     },
-    [connection]
+    [connection, t]
   );
 
   const acknowledgeAlert = useCallback((id: string) => {
@@ -227,21 +229,24 @@ export function useAppState() {
   return ctx;
 }
 
-function buildSOSMessage(location: { lat: number; lng: number } | null): string {
+function buildSOSMessage(
+  location: { lat: number; lng: number } | null,
+  t: (key: import("./i18n/en").TranslationKey, vars?: Record<string, string | number>) => string
+): string {
   const locationText = location
     ? `https://www.google.com/maps/search/?api=1&query=${location.lat},${location.lng}`
-    : "Location unavailable";
+    : t("sosMessageLocationUnavailable");
   return [
-    "🚨 SOS ALERT",
+    t("sosMessageAlertShort"),
     "",
-    "I may need help.",
+    t("sosMessageNeedHelp"),
     "",
-    "My current location:",
+    t("sosMessageLocationLabel"),
     locationText,
     "",
-    "Time:",
+    t("sosMessageTimeLabel"),
     new Date().toLocaleString(),
     "",
-    "Please contact emergency services if necessary.",
+    t("sosMessageFooterServices"),
   ].join("\n");
 }

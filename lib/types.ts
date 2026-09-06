@@ -1,6 +1,8 @@
 // Shared type definitions for SnowSentinel prototype.
 // All "risk" and "impact" values here are experimental / demo constructs — see lib/demoData.ts.
 
+import type { TranslationKey } from "./i18n/en";
+
 export type RiskLevel = "LOW" | "MEDIUM" | "ELEVATED" | "HIGH";
 
 export interface RegionOption {
@@ -8,7 +10,7 @@ export interface RegionOption {
   name: string;
   shortName: string;
   center: [number, number]; // [lat, lng]
-  description: string;
+  descriptionKey: TranslationKey;
 }
 
 export interface ObservationMeta {
@@ -32,17 +34,17 @@ export interface TimelinePoint {
 
 export interface RiskFactor {
   key: "snowIce" | "environmental" | "historical" | "terrain";
-  label: string;
+  labelKey: TranslationKey;
   score: number; // 0-100
   weight: number; // 0-1
-  description: string;
+  descriptionKey: TranslationKey;
 }
 
 export interface RiskAssessment {
   riskScore: number; // 0-100
   riskLevel: RiskLevel;
   factors: RiskFactor[];
-  weightingNote: string;
+  weightingNote: TranslationKey;
 }
 
 export interface Settlement {
@@ -53,7 +55,7 @@ export interface Settlement {
   population: number;
   exposure: "HIGH" | "MODERATE" | "LOW";
   distanceFromPathKm: number;
-  preparedness: string;
+  preparednessKey: TranslationKey;
 }
 
 export interface Infrastructure {
@@ -65,15 +67,15 @@ export interface Infrastructure {
 
 export interface ImpactZonePolygon {
   id: string;
-  label: "HIGH IMPACT ZONE" | "MONITORING ZONE" | "LOWER IMPACT ZONE";
+  labelKey: "zoneLabelHigh" | "zoneLabelMonitoring" | "zoneLabelLower";
   color: string;
   positions: [number, number][];
 }
 
 export interface HazardScenario {
   id: string;
-  name: string;
-  description: string;
+  nameKey: TranslationKey;
+  descriptionKey: TranslationKey;
   region: RegionOption;
   observationCurrent: { date: string; label: string };
   observationPrevious: { date: string; label: string };
@@ -89,8 +91,8 @@ export interface HazardScenario {
     exposedSettlements: number;
     criticalInfrastructure: number;
   };
-  recommendedActions: string[];
-  explanation: string;
+  recommendedActionKeys: TranslationKey[];
+  explanationKey: TranslationKey;
 }
 
 export interface AnalyzeRequest {
@@ -100,6 +102,7 @@ export interface AnalyzeRequest {
   environmentalData: Record<string, unknown>;
   historicalRisk: Record<string, unknown>;
   terrainData: Record<string, unknown>;
+  language?: string;
 }
 
 export interface AnalyzeResponse {
@@ -107,12 +110,12 @@ export interface AnalyzeResponse {
   riskLevel: RiskLevel;
   observations: string[];
   riskFactors: RiskFactor[];
-  explanation: string;
+  explanation: string; // already-translated prose, rendered as-is
   potentialImpact: {
     area: string;
     settlements: number;
     infrastructure: number;
   };
-  recommendedActions: string[];
+  recommendedActions: TranslationKey[];
   dataSource: "AI" | "DEMO";
 }
