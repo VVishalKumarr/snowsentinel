@@ -22,6 +22,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "recipientUserIds and message are required" }, { status: 400 });
   }
 
-  const sosId = await sendSosToFamily(user.id, recipientUserIds, message, lat != null && lng != null ? { lat, lng } : null);
-  return NextResponse.json({ success: true, sosId });
+  const { sosId, notifiedCount } = await sendSosToFamily(
+    user.id,
+    recipientUserIds,
+    message,
+    lat != null && lng != null ? { lat, lng } : null
+  );
+  return NextResponse.json({ success: true, sosId, notifiedCount });
 }

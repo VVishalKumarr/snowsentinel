@@ -17,6 +17,7 @@ import { useAppState } from "@/lib/AppStateContext";
 import { useAuth } from "@/lib/AuthContext";
 import { useLanguage } from "@/lib/i18n";
 import type { TranslationKey } from "@/lib/i18n/en";
+import { useNotifications } from "@/lib/NotificationContext";
 import { emergencyContacts, telHref } from "@/lib/emergencyContacts.config";
 import { isNativeSmsAvailable, sendNativeSms, buildSmsComposeHref, cleanPhoneNumber } from "@/lib/nativeSms";
 
@@ -77,6 +78,7 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
   const { trustedContacts, familyMembers, submitSOS } = useAppState();
   const { user, authedFetch } = useAuth();
   const { t } = useLanguage();
+  const { refresh: refreshNotifications } = useNotifications();
 
   const [holdProgress, setHoldProgress] = useState(0);
   const [holding, setHolding] = useState(false);
@@ -186,10 +188,17 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
 
     const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
 
-    // Record the event locally (and server-side, if logged in) regardless
-    // of which channel is used — this is the audit trail, not the delivery.
-    const record = submitSOS(chosen.map((r) => r.id), location);
-    if (user) {
+    // Record the event locally regardless of channel — this is the local
+    // audit trail, not the delivery. The "family" channel persists its own
+    // canonical server-side record (with recipients) below via
+    // /api/sos/family, so it skips this generic /api/sos call to avoid
+    // creating two separate sos_requests rows for one SOS action.
+    const record = submitSOS(
+      chosen.map((r) => r.id),
+      location,
+      channel === "family" ? recipientUserIds : undefined
+    );
+    if (user && channel !== "family") {
       authedFetch("/api/sos", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -213,6 +222,7 @@ export default function SOSButton({ compact = false }: { compact?: boolean }) {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ recipientUserIds, message, lat: location?.lat, lng: location?.lng }),
         });
+        if (res.ok) refreshNotifications();
         finish(res.ok ? "SHARED" : "CANCELLED", channel);
         return;
       }

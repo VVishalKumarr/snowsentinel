@@ -10,6 +10,21 @@ import type { TranslationKey } from "@/lib/i18n/en";
 import { buildPriorityZones } from "@/lib/emergencyData";
 import { DEFAULT_LAYERS, type MapLayerToggles } from "@/lib/mapLayers";
 import { useLanguage } from "@/lib/i18n";
+import { getCrowdDensityForScenario, CROWD_DENSITY_LABEL_KEY, CROWD_DENSITY_EMOJI, type CrowdDensity } from "@/lib/crowdDensity";
+
+const CROWD_DENSITY_COLOR: Record<CrowdDensity, string> = {
+  LOW: "#22c55e",
+  MODERATE: "#eab308",
+  HIGH: "#f97316",
+  VERY_HIGH: "#dc2626",
+};
+
+const CROWD_DENSITY_RADIUS: Record<CrowdDensity, number> = {
+  LOW: 12,
+  MODERATE: 18,
+  HIGH: 26,
+  VERY_HIGH: 34,
+};
 
 const INFRA_EMOJI: Record<Infrastructure["type"], string> = {
   road: "🛣️",
@@ -136,6 +151,7 @@ export default function HazardMap({
   const { drawn, tip } = interpolatePath(scenario.impactPath, progress);
   const selectedSettlement = scenario.settlements.find((s) => s.id === selectedSettlementId) ?? null;
   const priorityZones = buildPriorityZones(scenario, t);
+  const crowdDensity = getCrowdDensityForScenario(scenario);
 
   return (
     <MapContainer center={scenario.region.center} zoom={12} className="h-full w-full" scrollWheelZoom>
@@ -196,6 +212,35 @@ export default function HazardMap({
                 fillOpacity: 0.12,
               }}
             />
+          );
+        })}
+
+      {layers.crowd &&
+        crowdDensity.map((c) => {
+          const settlement = scenario.settlements.find((s) => s.id === c.settlementId);
+          if (!settlement) return null;
+          return (
+            <CircleMarker
+              key={`crowd-${c.settlementId}`}
+              center={settlement.position}
+              radius={CROWD_DENSITY_RADIUS[c.density]}
+              pathOptions={{
+                color: CROWD_DENSITY_COLOR[c.density],
+                weight: 1,
+                fillColor: CROWD_DENSITY_COLOR[c.density],
+                fillOpacity: 0.25,
+              }}
+            >
+              <Popup>
+                <strong>{settlement.name}</strong>
+                <br />
+                {t("estimatedPeopleLabel")}: {c.estimatedPeople.toLocaleString()}
+                <br />
+                {t("crowdDensityFieldLabel")}: {CROWD_DENSITY_EMOJI[c.density]} {t(CROWD_DENSITY_LABEL_KEY[c.density])}
+                <br />
+                <span className="text-[10px] text-slate-500">{t("demoCrowdDataBadge")}</span>
+              </Popup>
+            </CircleMarker>
           );
         })}
 

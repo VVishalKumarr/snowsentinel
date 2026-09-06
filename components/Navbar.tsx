@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Satellite, UserCircle } from "lucide-react";
 import ConnectionIndicator from "./ConnectionIndicator";
 import LanguageSelector from "./LanguageSelector";
+import NotificationBell from "./NotificationBell";
 import { useAuth } from "@/lib/AuthContext";
 import { useLanguage } from "@/lib/i18n";
 
@@ -58,6 +59,7 @@ export default function Navbar() {
         <div className="flex items-center gap-2">
           <LanguageSelector compact />
           <ConnectionIndicator />
+          {user && <NotificationBell />}
           <Link
             href={user ? "/profile" : "/login"}
             className="flex items-center gap-1 rounded-full border border-slate-200 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"

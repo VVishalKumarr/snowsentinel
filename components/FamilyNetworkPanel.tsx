@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
   ShieldCheck,
@@ -21,6 +21,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { useLanguage } from "@/lib/i18n";
 import type { TranslationKey } from "@/lib/i18n/en";
 import type { FamilyMemberView } from "@/lib/family";
+import { useNotifications } from "@/lib/NotificationContext";
 
 const STATUS_LABEL_KEY: Record<FamilyMemberView["safetyStatus"], TranslationKey> = {
   SAFE: "familySafe",
@@ -28,30 +29,6 @@ const STATUS_LABEL_KEY: Record<FamilyMemberView["safetyStatus"], TranslationKey>
   NEEDS_HELP: "familyNeedsHelp",
   NOT_CHECKED_IN: "familyNotCheckedIn",
 };
-
-interface PendingRequest {
-  connectionId: number;
-  fromUserId: number;
-  fromName: string;
-  fromUsername: string;
-  relationship: string | null;
-  createdAt: string;
-}
-
-interface IncomingCheckIn {
-  connectionId: number;
-  fromUserId: number;
-  fromName: string;
-  requestedAt: string;
-}
-
-interface IncomingSosAlert {
-  id: number;
-  senderId: number;
-  senderName: string;
-  location: { lat: number; lng: number } | null;
-  createdAt: string;
-}
 
 const STATUS_META: Record<
   FamilyMemberView["safetyStatus"],
@@ -63,7 +40,9 @@ const STATUS_META: Record<
   NOT_CHECKED_IN: { icon: CircleDashed, className: "border-slate-300 bg-slate-100 text-slate-500" },
 };
 
-function timeAgo(iso: string | null, t: (key: TranslationKey, vars?: Record<string, string | number>) => string): string {
+type Translate = (key: TranslationKey, vars?: Record<string, string | number>) => string;
+
+function timeAgo(iso: string | null, t: Translate): string {
   if (!iso) return t("familyTimeNever");
   const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
   if (mins < 1) return t("familyTimeJustNow");
@@ -73,15 +52,25 @@ function timeAgo(iso: string | null, t: (key: TranslationKey, vars?: Record<stri
   return t("familyTimeDaysAgo", { count: Math.round(hours / 24) });
 }
 
+function mapsUrl(location: { lat: number; lng: number }) {
+  return `https://www.google.com/maps/search/?api=1&query=${location.lat},${location.lng}`;
+}
+
 export default function FamilyNetworkPanel() {
   const { user, authedFetch, loading: authLoading } = useAuth();
   const { t } = useLanguage();
-
-  const [members, setMembers] = useState<FamilyMemberView[]>([]);
-  const [pending, setPending] = useState<PendingRequest[]>([]);
-  const [incomingCheckIns, setIncomingCheckIns] = useState<IncomingCheckIn[]>([]);
-  const [incomingSos, setIncomingSos] = useState<IncomingSosAlert[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    members,
+    pendingRequests: pending,
+    incomingCheckIns,
+    incomingSosAlerts: incomingSos,
+    myActiveSentSos,
+    sosHistory,
+    acknowledgeSos,
+    markSosRead,
+    resolveSos,
+    refresh,
+  } = useNotifications();
 
   const [searchUsername, setSearchUsername] = useState("");
   const [relationship, setRelationship] = useState("");
@@ -89,25 +78,7 @@ export default function FamilyNetworkPanel() {
   const [searchError, setSearchError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
-
-  const refresh = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
-    try {
-      const res = await authedFetch("/api/family");
-      const data = await res.json();
-      setMembers(data.members ?? []);
-      setPending(data.pendingRequests ?? []);
-      setIncomingCheckIns(data.incomingCheckIns ?? []);
-      setIncomingSos(data.incomingSosAlerts ?? []);
-    } finally {
-      setLoading(false);
-    }
-  }, [user, authedFetch]);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   if (authLoading) return null;
 
@@ -157,6 +128,7 @@ export default function FamilyNetworkPanel() {
     setSearchResult(null);
     setSearchUsername("");
     setRelationship("");
+    refresh();
   };
 
   const respondToRequest = async (connectionId: number, action: "accept" | "decline") => {
@@ -209,31 +181,87 @@ export default function FamilyNetworkPanel() {
   const pendingCount = members.filter((m) => m.safetyStatus === "CHECK_IN_REQUESTED").length;
   const needsHelpCount = members.filter((m) => m.safetyStatus === "NEEDS_HELP").length;
   const needsHelpMembers = members.filter((m) => m.safetyStatus === "NEEDS_HELP");
+  const activeIncomingSos = incomingSos.filter((a) => !a.resolvedAt);
+  const sosActiveCount = activeIncomingSos.length + myActiveSentSos.length;
 
   return (
     <div className="space-y-4">
-      {incomingSos.length > 0 && (
-        <div className="rounded-2xl border border-red-300 bg-red-50 p-4">
-          <div className="flex items-center gap-2 text-sm font-bold text-red-800">
-            <Siren className="h-4 w-4" /> {t("sosAlertTitle")}
+      {activeIncomingSos.length > 0 && (
+        <div className="rounded-2xl border-2 border-red-400 bg-red-50 p-4">
+          <div className="mb-2 flex items-center gap-2 text-sm font-bold text-red-800">
+            <Siren className="h-4 w-4" /> {t("activeSosTitle")}
           </div>
-          {incomingSos.slice(0, 3).map((a) => (
-            <div key={a.id} className="mt-2 flex flex-wrap items-center justify-between gap-2 text-sm text-red-700">
-              <span>
-                @{a.senderName} {t("sosMayNeedHelp")}
-              </span>
-              {a.location && (
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${a.location.lat},${a.location.lng}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 rounded-md border border-red-300 bg-white px-2.5 py-1 text-xs font-semibold hover:bg-red-100"
+          <div className="space-y-3">
+            {activeIncomingSos.map((a) => (
+              <div key={a.id} className="rounded-xl border border-red-200 bg-white p-3">
+                <div className="text-sm font-semibold text-slate-800">@{a.senderUsername}</div>
+                <p className="mt-0.5 text-sm text-red-700">
+                  {t("sosActivatedMessage", { name: a.senderName })} {t("sosMayNeedImmediateAssistance")}
+                </p>
+                <div className="mt-1 text-[11px] text-slate-400">{t("sosActivatedTimeAgo", { time: timeAgo(a.createdAt, t) })}</div>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  {a.location ? (
+                    <a
+                      href={mapsUrl(a.location)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => markSosRead(a.id)}
+                      className="flex items-center gap-1 rounded-md border border-red-300 bg-white px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-100"
+                    >
+                      <MapPin className="h-3 w-3" /> {t("sosViewLocation")}
+                    </a>
+                  ) : (
+                    <span className="text-xs text-slate-400">{t("locationNotAvailableBadge")}</span>
+                  )}
+                  {a.status === "ACKNOWLEDGED" ? (
+                    <span className="rounded-md bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                      {t("alertAcknowledged")}
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => acknowledgeSos(a.id)}
+                      className="rounded-md bg-red-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-red-700"
+                    >
+                      {t("alertAcknowledge")}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {myActiveSentSos.length > 0 && (
+        <div className="rounded-2xl border-2 border-orange-300 bg-orange-50 p-4">
+          <div className="mb-2 flex items-center gap-2 text-sm font-bold text-orange-800">
+            <Siren className="h-4 w-4" /> {t("activeSosTitle")} — {t("sosSentToFamily")}
+          </div>
+          <div className="space-y-3">
+            {myActiveSentSos.map((sos) => (
+              <div key={sos.sosId} className="rounded-xl border border-orange-200 bg-white p-3">
+                <div className="text-[11px] text-slate-400">{t("sosActivatedTimeAgo", { time: timeAgo(sos.createdAt, t) })}</div>
+                <div className="mt-2 text-xs font-semibold tracking-wide text-slate-500">{t("familyResponseTitle")}</div>
+                <div className="mt-1 space-y-1">
+                  {sos.recipients.map((r) => (
+                    <div key={r.userId} className="flex items-center gap-1.5 text-sm">
+                      <span>{r.status === "ACKNOWLEDGED" ? "🟢" : "⚪"}</span>
+                      <span className="text-slate-700">{r.name}</span>
+                      <span className="text-slate-400">
+                        — {r.status === "ACKNOWLEDGED" ? t("alertAcknowledged") : t("notSeenLabel")}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={() => resolveSos(sos.sosId)}
+                  className="mt-3 rounded-md border border-orange-300 bg-white px-2.5 py-1 text-xs font-semibold text-orange-700 hover:bg-orange-100"
                 >
-                  <MapPin className="h-3 w-3" /> {t("sosViewLocation")}
-                </a>
-              )}
-            </div>
-          ))}
+                  {t("resolveButton")}
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -248,7 +276,7 @@ export default function FamilyNetworkPanel() {
               <div className="flex gap-2">
                 {m.location && (
                   <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${m.location.lat},${m.location.lng}`}
+                    href={mapsUrl(m.location)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 rounded-md border border-red-300 bg-white px-2.5 py-1 text-xs font-semibold hover:bg-red-100"
@@ -277,10 +305,13 @@ export default function FamilyNetworkPanel() {
             {members.length} {t("familyMembers")}
           </span>
         </div>
-        <div className="mb-4 flex gap-3 text-xs">
+        <div className="mb-4 flex flex-wrap gap-3 text-xs">
           <span className="text-emerald-700">🟢 {safeCount} {t("familySafe")}</span>
           <span className="text-amber-700">🟡 {pendingCount} {t("familyCheckInRequested")}</span>
           <span className="text-red-700">🔴 {needsHelpCount} {t("familyNeedsHelp")}</span>
+          {sosActiveCount > 0 && (
+            <span className="font-semibold text-red-700">🚨 {sosActiveCount} {t("sosActiveLabel")}</span>
+          )}
         </div>
 
         <div className="mb-4 rounded-xl border border-teal-200 bg-teal-50 p-3">
@@ -341,9 +372,7 @@ export default function FamilyNetworkPanel() {
           </div>
         )}
 
-        {!loading && members.length === 0 && (
-          <p className="mb-4 text-xs text-slate-400">{t("familyNoMembersYet")}</p>
-        )}
+        {members.length === 0 && <p className="mb-4 text-xs text-slate-400">{t("familyNoMembersYet")}</p>}
 
         <div className="space-y-2">
           {members.map((m) => {
@@ -429,6 +458,48 @@ export default function FamilyNetworkPanel() {
         )}
         {formError && <p className="mt-2 text-xs text-red-600">{formError}</p>}
         {formSuccess && <p className="mt-2 text-xs text-emerald-600">{formSuccess}</p>}
+      </div>
+
+      <div className="glass-panel rounded-2xl p-4 sm:p-5">
+        <button
+          onClick={() => setHistoryOpen((v) => !v)}
+          className="flex w-full items-center justify-between text-left"
+        >
+          <h3 className="text-sm font-semibold tracking-wide text-slate-800">{t("sosHistoryTitle")}</h3>
+          <span className="text-xs text-slate-400">{historyOpen ? "▲" : "▼"}</span>
+        </button>
+        {historyOpen && (
+          <div className="mt-3 space-y-2">
+            {sosHistory.length === 0 && <p className="text-xs text-slate-400">{t("sosHistoryEmpty")}</p>}
+            {sosHistory.map((h) => (
+              <div
+                key={`${h.direction}-${h.sosId}`}
+                className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs"
+              >
+                <div className="flex items-center gap-2">
+                  <Siren className="h-3.5 w-3.5 text-red-500" />
+                  <div>
+                    <div className="font-medium text-slate-700">
+                      {h.direction === "SENT" ? user.name : h.counterpartName}
+                    </div>
+                    <div className="text-[10px] text-slate-400">{new Date(h.createdAt).toLocaleString()}</div>
+                  </div>
+                </div>
+                <span
+                  className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                    h.status === "RESOLVED"
+                      ? "border-slate-300 bg-slate-100 text-slate-500"
+                      : h.status === "ACKNOWLEDGED"
+                      ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                      : "border-red-300 bg-red-50 text-red-700"
+                  }`}
+                >
+                  {h.status === "RESOLVED" ? t("statusResolved") : h.status === "ACKNOWLEDGED" ? t("alertAcknowledged") : t("sosSent")}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

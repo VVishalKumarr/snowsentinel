@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { MapPin, Siren, Satellite as SatelliteIcon, ShieldHalf, LifeBuoy, Home, Users2, PhoneCall } from "lucide-react";
 import Navbar from "@/components/Navbar";
@@ -28,11 +28,17 @@ import EmergencyQuickBar from "@/components/EmergencyQuickBar";
 import DemoSimulationRunner from "@/components/DemoSimulationRunner";
 import OverviewMap from "@/components/OverviewMap";
 import MountainSelector from "@/components/MountainSelector";
+import RiskCountdown from "@/components/RiskCountdown";
+import LocationRiskCard from "@/components/LocationRiskCard";
+import CrowdDensityPanel from "@/components/CrowdDensityPanel";
 import { useScenario } from "@/lib/ScenarioContext";
 import { useAppState } from "@/lib/AppStateContext";
+import { useHazardAlert } from "@/lib/HazardAlertContext";
 import { useLanguage } from "@/lib/i18n";
 import { useDisasterSimulation } from "@/lib/useDisasterSimulation";
 import { getShelters, getAmbulances, VOLUNTEERS } from "@/lib/emergencyData";
+import { getTotalEstimatedPeople, getHighestCrowdDensity, CROWD_DENSITY_LABEL_KEY, CROWD_DENSITY_EMOJI } from "@/lib/crowdDensity";
+import { ALERT_LEVEL_LABEL_KEY, ALERT_LEVEL_EMOJI, ALERT_LEVEL_COLORS } from "@/lib/alertLevels";
 import { DASHBOARD_TABS, type DashboardTab } from "@/lib/dashboardTabs";
 
 function DashboardInner() {
@@ -43,10 +49,27 @@ function DashboardInner() {
   );
   const [impactSignal, setImpactSignal] = useState(0);
 
+  // Keep the visible tab in sync with ?tab=... even when navigating here
+  // via router.push while already mounted on /dashboard (e.g. clicking a
+  // notification) — a plain useState initializer only runs once, so
+  // without this the tab would silently fail to switch on a same-route
+  // navigation.
+  useEffect(() => {
+    const urlTab = searchParams.get("tab") as DashboardTab | null;
+    if (urlTab && DASHBOARD_TABS.some((dt) => dt.id === urlTab)) {
+      setTab((prev) => (prev === urlTab ? prev : urlTab));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   const { scenario } = useScenario();
   const { familyMembers } = useAppState();
+  const { alertLevel } = useHazardAlert();
   const { t } = useLanguage();
   const simulation = useDisasterSimulation(setTab, () => setImpactSignal((s) => s + 1));
+  const alertColors = ALERT_LEVEL_COLORS[alertLevel];
+  const totalEstimatedPeople = getTotalEstimatedPeople(scenario);
+  const highestDensity = getHighestCrowdDensity(scenario);
 
   const shelters = getShelters(scenario.region.id);
   const ambulances = getAmbulances(scenario.region.id);
@@ -110,18 +133,51 @@ function DashboardInner() {
 
             <MountainSelector />
 
-            <div className="glass-panel flex flex-wrap items-center justify-between gap-4 rounded-2xl p-4 sm:p-5">
-              <div>
-                <div className="text-[10px] font-medium tracking-wide text-slate-500">{t("currentHazard")}</div>
-                <div className="mt-1">
-                  <RiskIndicator level={scenario.risk.riskLevel} />
+            <div className={`glass-panel rounded-2xl border-2 p-4 sm:p-5 ${alertColors.border} ${alertColors.bg}`}>
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <div className="text-[10px] font-medium tracking-wide text-slate-500">{t("currentHazard")}</div>
+                  <div className="mt-1 flex items-center gap-2">
+                    <RiskIndicator level={scenario.risk.riskLevel} />
+                    <span className={`text-sm font-bold ${alertColors.text}`}>
+                      {ALERT_LEVEL_EMOJI[alertLevel]} {t(ALERT_LEVEL_LABEL_KEY[alertLevel])}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-xs font-medium text-slate-600">{t("hazardTypeAvalanche")}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] tracking-wide text-slate-500">{t("riskLabel")}</div>
+                  <div className="text-3xl font-bold text-slate-800">
+                    {scenario.risk.riskScore}
+                    <span className="text-lg text-slate-400">/100</span>
+                  </div>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="text-[10px] tracking-wide text-slate-500">{t("riskLabel")}</div>
-                <div className="text-3xl font-bold text-slate-800">
-                  {scenario.risk.riskScore}
-                  <span className="text-lg text-slate-400">/100</span>
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <RiskCountdown />
+                <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs">
+                  <div className="text-[10px] font-semibold tracking-wide text-slate-500">{t("crowdDensityFieldLabel")}</div>
+                  <div className="mt-1 text-sm font-bold">
+                    {CROWD_DENSITY_EMOJI[highestDensity]} {t(CROWD_DENSITY_LABEL_KEY[highestDensity])}
+                  </div>
+                  <div className="mt-1 text-slate-500">
+                    {t("estimatedPeopleLabel")}: <span className="font-mono text-slate-700">{totalEstimatedPeople.toLocaleString()}</span>
+                  </div>
+                  <div className="mt-1 text-[10px] text-slate-400">{t("demoCrowdDataBadge")}</div>
+                </div>
+                <div className="flex flex-col justify-center gap-2 rounded-xl border border-slate-200 bg-white p-3">
+                  <button
+                    onClick={() => setTab("impact")}
+                    className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-900"
+                  >
+                    {t("viewImpactMapButton")}
+                  </button>
+                  <button
+                    onClick={() => setTab("shelters")}
+                    className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    {t("findNearbyShelterButton")}
+                  </button>
                 </div>
               </div>
             </div>
@@ -160,6 +216,8 @@ function DashboardInner() {
         {tab === "impact" && (
           <div className="space-y-6">
             <ImpactZone scenario={scenario} autoSimulateSignal={impactSignal} />
+            <LocationRiskCard />
+            <CrowdDensityPanel scenario={scenario} />
             <PriorityZonePanel scenario={scenario} />
             <WarningPanel scenario={scenario} />
           </div>

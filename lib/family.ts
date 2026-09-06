@@ -207,40 +207,249 @@ export async function removeFamilyConnection(userId: number, connectionId: numbe
 // per recipient; it does not itself guarantee the recipient has seen it
 // any faster than they next open the app (there is no push notification
 // infra here), which is disclosed in the UI rather than implied away.
+//
+// SECURITY: recipientUserIds is client-supplied, so it is filtered down to
+// only the sender's own ACCEPTED family connections before any row is
+// created — a caller cannot cause a notification to be created for an
+// arbitrary/unrelated user id.
 // ---------------------------------------------------------------------------
 export async function sendSosToFamily(
   senderId: number,
   recipientUserIds: number[],
   message: string,
   location: { lat: number; lng: number } | null
-): Promise<number> {
+): Promise<{ sosId: number; notifiedCount: number }> {
   await ensureSchema();
+
+  // @vercel/postgres's sql tag types template values as Primitive, but the
+  // underlying Neon/pg driver correctly binds a plain array for ANY($n) —
+  // verified against the live database. The cast below only widens the
+  // TypeScript type at the call site, not the runtime behavior.
+  const authorized = await sql<{ family_member_user_id: number }>`
+    SELECT family_member_user_id FROM family_connections
+    WHERE owner_user_id = ${senderId} AND status = 'ACCEPTED'
+      AND family_member_user_id = ANY(${recipientUserIds as unknown as number})
+  `;
+  const authorizedIds = authorized.rows.map((r) => r.family_member_user_id);
+
   const { rows } = await sql<{ id: number }>`
     INSERT INTO sos_requests (user_id, latitude, longitude, message, status)
     VALUES (${senderId}, ${location?.lat ?? null}, ${location?.lng ?? null}, ${message}, 'SENT')
     RETURNING id
   `;
   const sosId = rows[0].id;
-  for (const recipientId of recipientUserIds) {
+  for (const recipientId of authorizedIds) {
     await sql`
-      INSERT INTO sos_recipients (sos_request_id, recipient_user_id)
-      VALUES (${sosId}, ${recipientId})
+      INSERT INTO sos_recipients (sos_request_id, recipient_user_id, status)
+      VALUES (${sosId}, ${recipientId}, 'UNREAD')
     `;
   }
-  return sosId;
+  return { sosId, notifiedCount: authorizedIds.length };
 }
 
-export async function listIncomingSosAlerts(userId: number) {
+export type SosNotificationStatus = "UNREAD" | "READ" | "ACKNOWLEDGED";
+
+export interface IncomingSosAlert {
+  id: number; // sos_recipients.id — the notification's own id
+  sosId: number;
+  senderId: number;
+  senderName: string;
+  senderUsername: string;
+  message: string;
+  location: { lat: number; lng: number } | null;
+  status: SosNotificationStatus;
+  createdAt: string;
+  readAt: string | null;
+  acknowledgedAt: string | null;
+  resolvedAt: string | null;
+}
+
+export async function listIncomingSosAlerts(userId: number): Promise<IncomingSosAlert[]> {
   await ensureSchema();
   const { rows } = await sql<{
     id: number;
+    sos_id: number;
     sender_id: number;
     sender_name: string;
+    sender_username: string;
+    message: string;
     latitude: number | null;
     longitude: number | null;
+    status: SosNotificationStatus;
     created_at: string;
+    read_at: string | null;
+    acknowledged_at: string | null;
+    resolved_at: string | null;
   }>`
-    SELECT sr.id, s.user_id AS sender_id, u.name AS sender_name, s.latitude, s.longitude, s.created_at
+    SELECT sr.id, s.id AS sos_id, s.user_id AS sender_id, u.name AS sender_name, u.username AS sender_username,
+           s.message, s.latitude, s.longitude, sr.status, s.created_at, sr.read_at, sr.acknowledged_at, s.resolved_at
+    FROM sos_recipients sr
+    JOIN sos_requests s ON s.id = sr.sos_request_id
+    JOIN users u ON u.id = s.user_id
+    WHERE sr.recipient_user_id = ${userId}
+    ORDER BY s.created_at DESC
+    LIMIT 30
+  `;
+  return rows.map((r) => ({
+    id: r.id,
+    sosId: r.sos_id,
+    senderId: r.sender_id,
+    senderName: r.sender_name,
+    senderUsername: r.sender_username,
+    message: r.message,
+    location: r.latitude != null && r.longitude != null ? { lat: r.latitude, lng: r.longitude } : null,
+    status: r.status,
+    createdAt: r.created_at,
+    readAt: r.read_at,
+    acknowledgedAt: r.acknowledged_at,
+    resolvedAt: r.resolved_at,
+  }));
+}
+
+// Scoped to the requesting recipient — a notification row belonging to
+// someone else simply won't match and is silently a no-op, not an error
+// that would leak whether the id exists.
+export async function markSosNotificationRead(recipientUserId: number, notificationId: number) {
+  await ensureSchema();
+  await sql`
+    UPDATE sos_recipients
+    SET status = CASE WHEN status = 'UNREAD' THEN 'READ' ELSE status END,
+        read_at = COALESCE(read_at, now())
+    WHERE id = ${notificationId} AND recipient_user_id = ${recipientUserId}
+  `;
+}
+
+export async function acknowledgeSosNotification(recipientUserId: number, notificationId: number) {
+  await ensureSchema();
+  const { rowCount } = await sql`
+    UPDATE sos_recipients
+    SET status = 'ACKNOWLEDGED', acknowledged_at = now(), read_at = COALESCE(read_at, now())
+    WHERE id = ${notificationId} AND recipient_user_id = ${recipientUserId}
+  `;
+  if (!rowCount) throw new UserFacingError("SOS notification not found");
+}
+
+export interface SosRecipientStatusRow {
+  userId: number;
+  name: string;
+  username: string;
+  status: SosNotificationStatus;
+  acknowledgedAt: string | null;
+}
+
+export interface SosStatusForSender {
+  sosId: number;
+  createdAt: string;
+  resolvedAt: string | null;
+  location: { lat: number; lng: number } | null;
+  recipients: SosRecipientStatusRow[];
+}
+
+// Only the sender may see who has acknowledged their own SOS — this is not
+// exposed for any sos_request the requester didn't create.
+export async function getSosStatusForSender(senderId: number, sosId: number): Promise<SosStatusForSender> {
+  await ensureSchema();
+  const { rows: sosRows } = await sql<{ id: number; created_at: string; resolved_at: string | null; latitude: number | null; longitude: number | null }>`
+    SELECT id, created_at, resolved_at, latitude, longitude FROM sos_requests WHERE id = ${sosId} AND user_id = ${senderId}
+  `;
+  const sos = sosRows[0];
+  if (!sos) throw new UserFacingError("SOS not found");
+
+  const { rows: recipientRows } = await sql<{ user_id: number; name: string; username: string; status: SosNotificationStatus; acknowledged_at: string | null }>`
+    SELECT u.id AS user_id, u.name, u.username, sr.status, sr.acknowledged_at
+    FROM sos_recipients sr
+    JOIN users u ON u.id = sr.recipient_user_id
+    WHERE sr.sos_request_id = ${sosId}
+    ORDER BY u.name ASC
+  `;
+
+  return {
+    sosId: sos.id,
+    createdAt: sos.created_at,
+    resolvedAt: sos.resolved_at,
+    location: sos.latitude != null && sos.longitude != null ? { lat: sos.latitude, lng: sos.longitude } : null,
+    recipients: recipientRows.map((r) => ({
+      userId: r.user_id,
+      name: r.name,
+      username: r.username,
+      status: r.status,
+      acknowledgedAt: r.acknowledged_at,
+    })),
+  };
+}
+
+export async function resolveSos(senderId: number, sosId: number) {
+  await ensureSchema();
+  const { rowCount } = await sql`
+    UPDATE sos_requests SET resolved_at = now() WHERE id = ${sosId} AND user_id = ${senderId} AND resolved_at IS NULL
+  `;
+  if (!rowCount) throw new UserFacingError("Active SOS not found");
+}
+
+// My own SOS events that are still active (unresolved) and have at least
+// one family recipient — used for the Family Safety "Active SOS" section
+// and lets the sender see who has acknowledged, without a separate fetch
+// per event.
+export async function listMyActiveSentSos(userId: number): Promise<SosStatusForSender[]> {
+  await ensureSchema();
+  const { rows } = await sql<{ id: number }>`
+    SELECT DISTINCT s.id
+    FROM sos_requests s
+    JOIN sos_recipients sr ON sr.sos_request_id = s.id
+    WHERE s.user_id = ${userId} AND s.resolved_at IS NULL
+    ORDER BY s.id DESC
+    LIMIT 10
+  `;
+  return Promise.all(rows.map((r) => getSosStatusForSender(userId, r.id)));
+}
+
+export interface SosHistoryItem {
+  sosId: number;
+  direction: "SENT" | "RECEIVED";
+  counterpartName: string;
+  counterpartUsername: string;
+  createdAt: string;
+  status: "SENT" | "ACKNOWLEDGED" | "RESOLVED";
+  location: { lat: number; lng: number } | null;
+}
+
+// Combined history of SOS events I sent and SOS events sent to me — each
+// side only ever sees the events it actually participated in.
+export async function listMySosHistory(userId: number): Promise<SosHistoryItem[]> {
+  await ensureSchema();
+
+  const { rows: sentRows } = await sql<{
+    id: number;
+    created_at: string;
+    resolved_at: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    ack_count: string;
+    recipient_count: string;
+  }>`
+    SELECT s.id, s.created_at, s.resolved_at, s.latitude, s.longitude,
+           COUNT(sr.id) FILTER (WHERE sr.status = 'ACKNOWLEDGED') AS ack_count,
+           COUNT(sr.id) AS recipient_count
+    FROM sos_requests s
+    LEFT JOIN sos_recipients sr ON sr.sos_request_id = s.id
+    WHERE s.user_id = ${userId}
+    GROUP BY s.id
+    ORDER BY s.created_at DESC
+    LIMIT 20
+  `;
+
+  const { rows: receivedRows } = await sql<{
+    sos_id: number;
+    created_at: string;
+    resolved_at: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    status: SosNotificationStatus;
+    sender_name: string;
+    sender_username: string;
+  }>`
+    SELECT s.id AS sos_id, s.created_at, s.resolved_at, s.latitude, s.longitude, sr.status,
+           u.name AS sender_name, u.username AS sender_username
     FROM sos_recipients sr
     JOIN sos_requests s ON s.id = sr.sos_request_id
     JOIN users u ON u.id = s.user_id
@@ -248,13 +457,28 @@ export async function listIncomingSosAlerts(userId: number) {
     ORDER BY s.created_at DESC
     LIMIT 20
   `;
-  return rows.map((r) => ({
-    id: r.id,
-    senderId: r.sender_id,
-    senderName: r.sender_name,
-    location: r.latitude != null && r.longitude != null ? { lat: r.latitude, lng: r.longitude } : null,
+
+  const sent: SosHistoryItem[] = sentRows.map((r) => ({
+    sosId: r.id,
+    direction: "SENT",
+    counterpartName: "",
+    counterpartUsername: "",
     createdAt: r.created_at,
+    status: r.resolved_at ? "RESOLVED" : Number(r.ack_count) > 0 ? "ACKNOWLEDGED" : "SENT",
+    location: r.latitude != null && r.longitude != null ? { lat: r.latitude, lng: r.longitude } : null,
   }));
+
+  const received: SosHistoryItem[] = receivedRows.map((r) => ({
+    sosId: r.sos_id,
+    direction: "RECEIVED",
+    counterpartName: r.sender_name,
+    counterpartUsername: r.sender_username,
+    createdAt: r.created_at,
+    status: r.resolved_at ? "RESOLVED" : r.status === "ACKNOWLEDGED" ? "ACKNOWLEDGED" : "SENT",
+    location: r.latitude != null && r.longitude != null ? { lat: r.latitude, lng: r.longitude } : null,
+  }));
+
+  return [...sent, ...received].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
 function toFamilyMemberView(

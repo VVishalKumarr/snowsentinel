@@ -14,6 +14,7 @@ const LAYER_LABEL_KEYS: { key: keyof MapLayerToggles; labelKey: TranslationKey }
   { key: "ambulances", labelKey: "layerAmbulances" },
   { key: "safeZones", labelKey: "layerSafeZones" },
   { key: "roads", labelKey: "layerRoads" },
+  { key: "crowd", labelKey: "filterCrowd" },
 ];
 
 export default function MapLayerControls({

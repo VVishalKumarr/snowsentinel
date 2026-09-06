@@ -85,6 +85,11 @@ export function ensureSchema(): Promise<void> {
           created_at TIMESTAMPTZ NOT NULL DEFAULT now()
         );
       `;
+      // resolved_at: set by the SENDER only, once they mark the emergency
+      // over. Distinct from a recipient acknowledging (below) — one family
+      // member acknowledging doesn't mean the situation is resolved.
+      await sql`ALTER TABLE sos_requests ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ`;
+
       await sql`
         CREATE TABLE IF NOT EXISTS sos_recipients (
           id SERIAL PRIMARY KEY,
@@ -94,6 +99,13 @@ export function ensureSchema(): Promise<void> {
           created_at TIMESTAMPTZ NOT NULL DEFAULT now()
         );
       `;
+      // Real per-recipient notification state — UNREAD until the recipient
+      // opens it, ACKNOWLEDGED once they explicitly confirm. Kept separate
+      // from `viewed` (now superseded but left in place) to avoid a risky
+      // column rename on a live table.
+      await sql`ALTER TABLE sos_recipients ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'UNREAD'`;
+      await sql`ALTER TABLE sos_recipients ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ`;
+      await sql`ALTER TABLE sos_recipients ADD COLUMN IF NOT EXISTS acknowledged_at TIMESTAMPTZ`;
     })();
   }
   return schemaReady;

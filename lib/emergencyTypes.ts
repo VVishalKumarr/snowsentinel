@@ -128,6 +128,12 @@ export interface SOSRequest {
   recipientIds: string[];
   location: { lat: number; lng: number } | null;
   message: string;
+  // Present only when this SOS was meant to go through the Family Network
+  // channel. If the sender was offline, this is what the reconnect-sync
+  // logic uses to actually deliver it (create the DB notification) once
+  // connectivity returns — see AppStateContext's reconnect effect.
+  familyRecipientUserIds?: number[];
+  familyDelivered?: boolean;
 }
 
 export type PriorityLevel = 1 | 2 | 3 | 4;

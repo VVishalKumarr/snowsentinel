@@ -19,6 +19,7 @@ import {
 import type { FamilyMember, TrustedContact, SOSRequest, SafetyStatus } from "./emergencyTypes";
 import { DEFAULT_FAMILY_MEMBERS } from "./emergencyData";
 import { useLanguage } from "./i18n";
+import { useAuth } from "./AuthContext";
 
 export type ConnectionState = "ONLINE" | "LIMITED" | "OFFLINE";
 
@@ -33,7 +34,11 @@ interface AppState {
   respondCheckIn: (memberId: string, status: Extract<SafetyStatus, "SAFE" | "NEEDS_HELP">) => void;
   addTrustedContact: (contact: Omit<TrustedContact, "id">) => void;
   removeTrustedContact: (id: string) => void;
-  submitSOS: (recipientIds: string[], location: { lat: number; lng: number } | null) => SOSRequest;
+  submitSOS: (
+    recipientIds: string[],
+    location: { lat: number; lng: number } | null,
+    familyRecipientUserIds?: number[]
+  ) => SOSRequest;
   acknowledgeAlert: (id: string) => void;
 }
 
@@ -65,6 +70,7 @@ function save<T>(key: string, value: T) {
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const { t } = useLanguage();
+  const { authedFetch } = useAuth();
   const [hydrated, setHydrated] = useState(false);
   const [connection, setConnection] = useState<ConnectionState>("ONLINE");
   const [syncing, setSyncing] = useState(false);
@@ -132,18 +138,53 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // When connection recovers, replay any queued SOS events.
+  // When connection recovers, replay any queued SOS events. A queued
+  // request bound for the Family Network (familyRecipientUserIds set)
+  // actually gets POSTed now — this is the real delivery, not just a
+  // local status flip — so recipients only ever learn about it once it
+  // has genuinely been stored server-side. Everything else (no real
+  // delivery channel to retry) just flips to SENT locally, as before.
   useEffect(() => {
     if (prevConnection.current !== "ONLINE" && connection === "ONLINE" && sosQueue.some((r) => r.status === "QUEUED")) {
       setSyncing(true);
-      const t = setTimeout(() => {
-        setSosQueue((prev) => prev.map((r) => (r.status === "QUEUED" ? { ...r, status: "SENT" } : r)));
+      (async () => {
+        const pending = sosQueue.filter((r) => r.status === "QUEUED");
+        const delivered = new Map<string, boolean>();
+        for (const r of pending) {
+          if (r.familyRecipientUserIds?.length && !r.familyDelivered) {
+            try {
+              const res = await authedFetch("/api/sos/family", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({
+                  recipientUserIds: r.familyRecipientUserIds,
+                  message: r.message,
+                  lat: r.location?.lat,
+                  lng: r.location?.lng,
+                }),
+              });
+              delivered.set(r.id, res.ok);
+            } catch {
+              delivered.set(r.id, false);
+            }
+          }
+        }
+        setSosQueue((prev) =>
+          prev.map((r) => {
+            if (r.status !== "QUEUED") return r;
+            if (r.familyRecipientUserIds?.length) {
+              const ok = delivered.get(r.id) ?? false;
+              return ok ? { ...r, status: "SENT", familyDelivered: true } : r;
+            }
+            return { ...r, status: "SENT" };
+          })
+        );
         setSyncing(false);
-      }, 1200);
-      return () => clearTimeout(t);
+      })();
     }
     prevConnection.current = connection;
-  }, [connection, sosQueue]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connection]);
 
   const requestCheckIn = useCallback((memberId: string) => {
     setFamilyMembers((prev) =>
@@ -169,7 +210,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const submitSOS = useCallback(
-    (recipientIds: string[], location: { lat: number; lng: number } | null): SOSRequest => {
+    (
+      recipientIds: string[],
+      location: { lat: number; lng: number } | null,
+      familyRecipientUserIds?: number[]
+    ): SOSRequest => {
       const isOnline = navigator.onLine && connection !== "OFFLINE";
       const request: SOSRequest = {
         id: `sos-${Date.now()}`,
@@ -178,6 +223,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         recipientIds,
         location,
         message: buildSOSMessage(location, t),
+        ...(familyRecipientUserIds?.length ? { familyRecipientUserIds } : {}),
       };
       setSosQueue((prev) => [request, ...prev]);
       return request;

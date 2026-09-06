@@ -15,6 +15,7 @@ export interface MapLayerToggles {
   ambulances: boolean;
   safeZones: boolean;
   roads: boolean;
+  crowd: boolean;
 }
 
 export const DEFAULT_LAYERS: MapLayerToggles = {
@@ -27,4 +28,5 @@ export const DEFAULT_LAYERS: MapLayerToggles = {
   ambulances: false,
   safeZones: false,
   roads: true,
+  crowd: false,
 };
