@@ -24,7 +24,7 @@ export default function HazardAlertBanner() {
   const hasSound = ALERT_LEVEL_RANK[bannerAlert.level] >= ALERT_LEVEL_RANK.HIGH;
 
   return (
-    <div className="fixed inset-x-0 top-16 z-[90] flex justify-center px-4">
+    <div className="fixed inset-x-0 top-16 z-[1200] flex justify-center px-4">
       <div className={`w-full max-w-md rounded-2xl border-2 ${colors.border} ${colors.bg} p-4 shadow-lg`}>
         <div className="mb-2 flex items-start justify-between gap-2">
           <div className={`flex items-center gap-2 text-sm font-bold ${colors.text}`}>

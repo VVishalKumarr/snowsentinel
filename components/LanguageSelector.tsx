@@ -12,7 +12,7 @@ export default function LanguageSelector({ compact = false }: { compact?: boolea
       <select
         value={language}
         onChange={(e) => setLanguage(e.target.value as typeof language)}
-        className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 outline-none focus:border-teal-400"
+        className="w-[4.5rem] max-w-[30vw] truncate rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 outline-none focus:border-teal-400 sm:w-auto sm:max-w-none"
         aria-label="Language"
       >
         {LANGUAGES.map((l) => (

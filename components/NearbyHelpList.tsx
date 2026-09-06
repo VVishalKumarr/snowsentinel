@@ -76,12 +76,12 @@ export default function NearbyHelpList() {
           const meta = TYPE_META[s.type];
           return (
             <div key={s.id} className="rounded-xl border border-slate-200 bg-white p-3">
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
                   <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-800">
-                    <span>{meta.emoji}</span> {s.name}
+                    <span>{meta.emoji}</span> <span className="truncate">{s.name}</span>
                   </div>
-                  <div className="mt-0.5 flex items-center gap-2 text-xs text-slate-500">
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500">
                     <span>{t(meta.labelKey)}</span>
                     <span>·</span>
                     <span className="font-mono">{t("distanceKm", { value: s.distanceKm })}</span>
@@ -93,16 +93,16 @@ export default function NearbyHelpList() {
                     )}
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-shrink-0 gap-2">
                   {s.phone ? (
                     <a
                       href={`tel:${s.phone}`}
-                      className="flex items-center gap-1 rounded-md bg-teal-600 px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-teal-700"
+                      className="flex flex-1 items-center justify-center gap-1 rounded-md bg-teal-600 px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-teal-700 sm:flex-initial"
                     >
                       <PhoneCall className="h-3 w-3" /> {t("call")}
                     </a>
                   ) : (
-                    <span className="rounded-md border border-slate-200 px-2.5 py-1.5 text-[10px] text-slate-400">
+                    <span className="flex flex-1 items-center justify-center rounded-md border border-slate-200 px-2.5 py-1.5 text-[10px] text-slate-400 sm:flex-initial">
                       {t("useHelpline")}
                     </span>
                   )}
@@ -110,7 +110,7 @@ export default function NearbyHelpList() {
                     href={directionsUrl(s.position)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 rounded-md border border-slate-300 px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50"
+                    className="flex flex-1 items-center justify-center gap-1 rounded-md border border-slate-300 px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 sm:flex-initial"
                   >
                     <Navigation className="h-3 w-3" /> {t("directions")}
                   </a>

@@ -4,6 +4,7 @@ const en = {
   appName: "SnowSentinel",
   appTagline: "Mountain Hazard Monitor",
   navHome: "Home",
+  navMenu: "Menu",
   navDashboard: "Dashboard",
   navProfile: "Profile",
 

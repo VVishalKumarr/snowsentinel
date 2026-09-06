@@ -37,14 +37,14 @@ export default function ImageComparison({ scenario }: { scenario: HazardScenario
 
   return (
     <div className="glass-panel rounded-2xl p-4 sm:p-5">
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-semibold tracking-wide text-slate-800">{t("satelliteObservationTitle")}</h2>
         <div className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setVariant(tab.id)}
-              className={`rounded-md px-3 py-1 text-[11px] font-semibold tracking-wide transition-colors ${
+              className={`rounded-md px-2 py-1 text-[11px] font-semibold tracking-wide transition-colors sm:px-3 ${
                 variant === tab.id
                   ? "bg-white text-teal-700 shadow-sm"
                   : "text-slate-500 hover:text-slate-700"

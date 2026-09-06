@@ -41,11 +41,11 @@ export default function AmbulanceList() {
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {ambulances.map((a) => (
           <div key={a.id} className="rounded-xl border border-slate-200 bg-white p-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-800">
-                <AmbulanceIcon className="h-4 w-4 text-teal-600" /> {a.name}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-slate-800">
+                <AmbulanceIcon className="h-4 w-4 flex-shrink-0 text-teal-600" /> <span className="truncate">{a.name}</span>
               </div>
-              <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLE[a.status]}`}>
+              <span className={`flex-shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLE[a.status]}`}>
                 {t(STATUS_LABEL_KEY[a.status])}
               </span>
             </div>

@@ -9,6 +9,7 @@ const bo: Record<TranslationKey, string> = {
   appName: "SnowSentinel",
   appTagline: "རི་བོའི་ཉེན་ཁའི་ལྟ་རྟོག",
   navHome: "ཁྱིམ།",
+  navMenu: "དཀར་ཆག",
   navDashboard: "ཚོད་འཛིན་ངོས།",
   navProfile: "སྒེར་གྱི་ངོ་སྤྲོད།",
 

@@ -91,8 +91,8 @@ export default function ShelterList() {
           return (
             <div key={s.id} className="rounded-xl border border-slate-200 bg-white p-3">
               <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-800">
-                  <Tent className="h-4 w-4 text-teal-600" /> {s.name}
+                <div className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-slate-800">
+                  <Tent className="h-4 w-4 flex-shrink-0 text-teal-600" /> <span className="break-words">{s.name}</span>
                 </div>
                 <span
                   className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${

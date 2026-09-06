@@ -21,17 +21,17 @@ export default function HelplineSection() {
         <a
           href={telHref(primary.number) ?? undefined}
           aria-disabled={!telHref(primary.number)}
-          className={`mb-4 flex items-center justify-between rounded-xl border p-4 ${
+          className={`mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border p-4 ${
             telHref(primary.number)
               ? "border-red-300 bg-red-50 hover:bg-red-100"
               : "border-slate-200 bg-slate-50 opacity-70 pointer-events-none"
           }`}
         >
-          <span className="flex items-center gap-2 text-sm font-semibold text-red-700">
-            <Siren className="h-4 w-4" /> {primary.emoji ?? "🚨"} {t(primary.labelKey).toUpperCase()}
+          <span className="flex min-w-0 flex-wrap items-center gap-2 text-sm font-semibold text-red-700">
+            <Siren className="h-4 w-4 flex-shrink-0" /> {primary.emoji ?? "🚨"} {t(primary.labelKey).toUpperCase()}
             {primary.number && <span className="font-mono text-red-600">{primary.number}</span>}
           </span>
-          <span className="rounded-lg bg-red-600 px-4 py-2 text-xs font-bold tracking-wide text-white">
+          <span className="flex-shrink-0 rounded-lg bg-red-600 px-4 py-2 text-xs font-bold tracking-wide text-white">
             {telHref(primary.number) ? t("call") : t("helplineNotConfigured")}
           </span>
         </a>
@@ -43,9 +43,9 @@ export default function HelplineSection() {
           return (
             <div
               key={c.category}
-              className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2.5"
+              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5"
             >
-              <div>
+              <div className="min-w-0">
                 <span className="text-sm text-slate-700">
                   {c.emoji ? `${c.emoji} ` : ""}
                   {t(c.labelKey)}

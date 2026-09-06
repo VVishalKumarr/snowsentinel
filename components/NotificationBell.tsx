@@ -54,7 +54,7 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-10 z-50 w-80 max-w-[90vw] rounded-xl border border-slate-200 bg-white shadow-lg">
+        <div className="absolute right-0 top-10 z-[1100] w-80 max-w-[90vw] rounded-xl border border-slate-200 bg-white shadow-lg">
           <div className="border-b border-slate-100 px-3 py-2 text-xs font-semibold tracking-wide text-slate-700">
             {t("notificationsTitle")}
           </div>

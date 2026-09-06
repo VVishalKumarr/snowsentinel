@@ -107,14 +107,14 @@ export default function SafetyAssistant() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-24 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-teal-600 text-white shadow-lg hover:bg-teal-700 sm:bottom-6 sm:right-24"
+        className="fixed bottom-24 right-6 z-[1100] flex h-14 w-14 items-center justify-center rounded-full bg-teal-600 text-white shadow-lg hover:bg-teal-700 sm:bottom-6 sm:right-24"
         aria-label={t("aiAssistantTitle")}
       >
         <Bot className="h-6 w-6" />
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-[95] flex items-end justify-center bg-slate-900/30 p-0 sm:items-center sm:p-4">
+        <div className="fixed inset-0 z-[1200] flex items-end justify-center bg-slate-900/30 p-0 sm:items-center sm:p-4">
           <div className="flex h-[85vh] w-full max-w-md flex-col rounded-t-2xl bg-white shadow-2xl sm:h-[70vh] sm:rounded-2xl">
             <div className="flex items-center justify-between border-b border-slate-200 p-3">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">

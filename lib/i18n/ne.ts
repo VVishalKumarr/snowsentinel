@@ -4,6 +4,7 @@ const ne: Record<TranslationKey, string> = {
   appName: "SnowSentinel",
   appTagline: "पर्वतीय खतरा अनुगमन",
   navHome: "गृह",
+  navMenu: "मेनु",
   navDashboard: "ड्यासबोर्ड",
   navProfile: "प्रोफाइल",
 

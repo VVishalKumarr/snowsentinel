@@ -19,17 +19,17 @@ export default function ConnectionIndicator() {
 
   if (syncing) {
     return (
-      <div className="flex items-center gap-2 rounded-full border border-teal-300 bg-teal-50 px-3 py-1">
-        <RefreshCw className="h-3 w-3 animate-spin text-teal-700" strokeWidth={2} />
-        <span className="text-[10px] font-medium tracking-[0.12em] text-teal-700">{t("syncing")}</span>
+      <div className="flex items-center gap-1.5 rounded-full border border-teal-300 bg-teal-50 px-2 py-1 sm:gap-2 sm:px-3">
+        <RefreshCw className="h-3 w-3 flex-shrink-0 animate-spin text-teal-700" strokeWidth={2} />
+        <span className="hidden text-[10px] font-medium tracking-[0.12em] text-teal-700 sm:inline">{t("syncing")}</span>
       </div>
     );
   }
 
   return (
-    <div className={`flex items-center gap-2 rounded-full border px-3 py-1 ${cfg.className}`}>
-      <Icon className="h-3 w-3" strokeWidth={2} />
-      <span className="text-[10px] font-medium tracking-[0.12em]">{t(cfg.labelKey)}</span>
+    <div className={`flex items-center gap-1.5 rounded-full border px-2 py-1 sm:gap-2 sm:px-3 ${cfg.className}`}>
+      <Icon className="h-3 w-3 flex-shrink-0" strokeWidth={2} />
+      <span className="hidden text-[10px] font-medium tracking-[0.12em] sm:inline">{t(cfg.labelKey)}</span>
     </div>
   );
 }

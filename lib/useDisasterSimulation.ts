@@ -9,9 +9,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useScenario } from "./ScenarioContext";
+import { useAuth } from "./AuthContext";
 import type { DashboardTab } from "./dashboardTabs";
 import { useLanguage } from "./i18n";
 import type { TranslationKey } from "./i18n/en";
+import { getCountdownDurationMs } from "./useCountdown";
 
 interface Step {
   tab: DashboardTab;
@@ -35,6 +37,7 @@ export function useDisasterSimulation(
 ) {
   const { scenario, setScenarioId } = useScenario();
   const { t } = useLanguage();
+  const { user, authedFetch } = useAuth();
   const [running, setRunning] = useState(false);
   const [stepIndex, setStepIndex] = useState(-1);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -52,6 +55,31 @@ export function useDisasterSimulation(
     stop();
     setRunning(true);
     setScenarioId(`${scenario.region.id}-extreme`);
+
+    // The automatic escalation and the manual Demo Hazard Control Panel
+    // both go through the SAME real backend pipeline (POST
+    // /api/hazard-alerts -> lib/hazardAlerts.ts -> lib/pushService.ts) —
+    // not a separate, in-app-only notification path. Escalating to the
+    // "extreme" demo scenario is this flow's CRITICAL stage, so that's
+    // when the real hazard alert (and its push fan-out) is created.
+    if (user) {
+      const extremeDurationMs = getCountdownDurationMs("extreme");
+      authedFetch("/api/hazard-alerts", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          hazardType: "AVALANCHE",
+          alertLevel: "CRITICAL",
+          regionId: scenario.region.id,
+          countdownSeconds: extremeDurationMs != null ? Math.round(extremeDurationMs / 1000) : null,
+          crowdDensity: "VERY_HIGH",
+        }),
+      }).catch(() => {
+        // Push delivery is best-effort — the guided walkthrough itself
+        // must keep running even if the alert couldn't be created.
+      });
+    }
+
     let elapsed = 0;
     STEPS.forEach((step, i) => {
       elapsed += step.delayMs;

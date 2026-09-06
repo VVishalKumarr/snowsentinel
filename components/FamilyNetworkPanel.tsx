@@ -326,7 +326,7 @@ export default function FamilyNetworkPanel() {
                 <p className="mb-2 text-amber-800">
                   <strong>{c.fromName}</strong> {t("familyCheckinRequestMessage")}
                 </p>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => respondCheckIn(c.connectionId, "SAFE")}
                     className="rounded-md bg-emerald-600 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-emerald-700"
@@ -353,7 +353,7 @@ export default function FamilyNetworkPanel() {
                 <p className="mb-2 text-slate-600">
                   @{p.fromUsername} {t("familyWantsToConnect")}
                 </p>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => respondToRequest(p.connectionId, "accept")}
                     className="flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700"
@@ -380,21 +380,21 @@ export default function FamilyNetworkPanel() {
             const Icon = meta.icon;
             return (
               <div key={m.connectionId} className="rounded-xl border border-slate-200 bg-white p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-semibold text-slate-800">{m.name}</div>
-                    <div className="text-[11px] text-slate-500">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold text-slate-800">{m.name}</div>
+                    <div className="truncate text-[11px] text-slate-500">
                       @{m.username} · {m.relationship || t("familyDefaultRelationship")}
                     </div>
                   </div>
-                  <span className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${meta.className}`}>
+                  <span className={`flex flex-shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${meta.className}`}>
                     <Icon className="h-3 w-3" /> {t(STATUS_LABEL_KEY[m.safetyStatus])}
                   </span>
                 </div>
                 <div className="mt-1.5 text-[11px] text-slate-400">
                   {t("familyLastCheckIn")}: {timeAgo(m.lastCheckIn, t)}
                 </div>
-                <div className="mt-2 flex gap-2">
+                <div className="mt-2 flex flex-wrap gap-2">
                   <button
                     onClick={() => requestCheckIn(m.connectionId)}
                     className="flex items-center gap-1.5 rounded-md border border-teal-300 bg-teal-50 px-2.5 py-1.5 text-[11px] font-semibold text-teal-700 hover:bg-teal-100"
