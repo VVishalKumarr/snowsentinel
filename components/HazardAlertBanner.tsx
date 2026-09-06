@@ -6,21 +6,22 @@
 // automated risk-level system) — see NOTIFICATION PRIORITY in the spec.
 
 import { useRouter } from "next/navigation";
-import { TriangleAlert, X } from "lucide-react";
+import { TriangleAlert, X, VolumeX } from "lucide-react";
 import { useHazardAlert } from "@/lib/HazardAlertContext";
 import { useLanguage } from "@/lib/i18n";
 import { useAuth } from "@/lib/AuthContext";
-import { ALERT_LEVEL_LABEL_KEY, ALERT_LEVEL_MESSAGE_KEY, ALERT_LEVEL_EMOJI, ALERT_LEVEL_COLORS } from "@/lib/alertLevels";
+import { ALERT_LEVEL_LABEL_KEY, ALERT_LEVEL_MESSAGE_KEY, ALERT_LEVEL_EMOJI, ALERT_LEVEL_COLORS, ALERT_LEVEL_RANK } from "@/lib/alertLevels";
 
 export default function HazardAlertBanner() {
   const { user } = useAuth();
-  const { bannerAlert, dismissBannerAlert } = useHazardAlert();
+  const { bannerAlert, dismissBannerAlert, muteSound } = useHazardAlert();
   const { t } = useLanguage();
   const router = useRouter();
 
   if (!user || !bannerAlert) return null;
   const colors = ALERT_LEVEL_COLORS[bannerAlert.level];
   const messageKey = ALERT_LEVEL_MESSAGE_KEY[bannerAlert.level];
+  const hasSound = ALERT_LEVEL_RANK[bannerAlert.level] >= ALERT_LEVEL_RANK.HIGH;
 
   return (
     <div className="fixed inset-x-0 top-16 z-[90] flex justify-center px-4">
@@ -54,6 +55,14 @@ export default function HazardAlertBanner() {
           >
             {t("findNearbyShelterButton")}
           </button>
+          {hasSound && (
+            <button
+              onClick={muteSound}
+              className="flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              <VolumeX className="h-3.5 w-3.5" /> {t("muteAlertButton")}
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -662,6 +662,37 @@ const en = {
   aiAssistantRiskExplainTemplate: "The current experimental risk score is {score}/100, classified as {level}. {message}",
   aiAssistantShelterAnswerTemplate: "The nearest demo shelter is about {distance} km away. Open the Shelters tab for the full list and directions.",
   aiAssistantCountdownAnswerTemplate: "{countdown}",
+
+  // Push notification titles (rendered server-side in the recipient's saved language)
+  pushHazardTitleCritical: "🚨 CRITICAL SNOWSENTINEL ALERT",
+  pushHazardTitleHigh: "⚠️ HIGH SNOWSENTINEL ALERT",
+  pushHazardTitleModerate: "SnowSentinel Safety Notice",
+
+  // Demo Hazard Control Panel
+  demoModeNavLabel: "🚨 Demo Hazard Alert",
+  demoModeWarningBadge: "⚠️ DEMO MODE",
+  demoModeWarningText: "These alerts are simulated for demonstration purposes. No real satellite/AI detection has occurred.",
+  demoHazardTypeLabel: "Hazard Type",
+  demoAlertLevelLabel: "Alert Level",
+  demoAffectedAreaLabel: "Affected Area",
+  demoCountdownLabel: "Countdown",
+  demoTriggerButton: "TRIGGER HAZARD ALERT",
+  demoTriggerSuccess: "Hazard alert created and sent to {count} recipient(s).",
+  demoTriggerFailed: "Could not create the hazard alert. Please try again.",
+  demoTriggerSending: "Sending…",
+
+  // Emergency notifications (real push) settings
+  emergencyNotificationsSettingTitle: "🔔 Emergency Notifications",
+  emergencyNotificationsExplain: "Allow SnowSentinel to send important disaster and family SOS alerts even when the app is closed.",
+  emergencyNotificationsEnableButton: "ENABLE",
+  emergencyNotificationsEnabled: "Enabled",
+  emergencyNotificationsUnsupported: "Push notifications aren't supported on this browser/device.",
+  emergencyNotificationsDeniedNote: "Notifications are turned off. You can enable them from your device or browser's notification settings for SnowSentinel.",
+
+  // Emergency sound
+  emergencySoundLabel: "🔊 Emergency Sound",
+  muteAlertButton: "MUTE ALERT",
+  soundAutoplayBlockedNote: "Your browser blocked the alert sound until you interact with the page — the visual alert is still shown.",
 } as const;
 
 export default en;

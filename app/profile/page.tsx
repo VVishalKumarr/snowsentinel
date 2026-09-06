@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { UserCircle, Users2, Globe, AtSign, LogOut, Bell, Volume2 } from "lucide-react";
+import { UserCircle, Users2, Globe, AtSign, LogOut, Bell, Volume2, BellRing } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import AuthGuard from "@/components/AuthGuard";
 import LanguageSelector from "@/components/LanguageSelector";
@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useNotifications } from "@/lib/NotificationContext";
 import { useHazardAlert } from "@/lib/HazardAlertContext";
+import { usePushRegistration } from "@/lib/PushRegistrationContext";
 import { LANGUAGES, useLanguage } from "@/lib/i18n";
 
 function ProfileContent() {
@@ -17,7 +18,8 @@ function ProfileContent() {
   const { trustedContacts } = useAppState();
   const { language, t } = useLanguage();
   const { browserNotificationsEnabled, setBrowserNotificationsEnabled, browserPermission } = useNotifications();
-  const { voiceAlertsEnabled, setVoiceAlertsEnabled, voiceSupported } = useHazardAlert();
+  const { voiceAlertsEnabled, setVoiceAlertsEnabled, voiceSupported, emergencySoundEnabled, setEmergencySoundEnabled } = useHazardAlert();
+  const { platform: pushPlatform, permission: pushPermission, enabled: pushEnabled, enablePush } = usePushRegistration();
   const router = useRouter();
 
   const currentLangLabel = LANGUAGES.find((l) => l.code === language)?.label ?? LANGUAGES[0].label;
@@ -68,6 +70,50 @@ function ProfileContent() {
           <p className="mt-2 text-[11px] text-slate-400">{t("currentLanguagePrefix", { lang: currentLangLabel })}</p>
 
           <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-sm font-medium text-slate-700">
+                <BellRing className="h-3.5 w-3.5" /> {t("emergencyNotificationsSettingTitle")}
+              </div>
+              {pushEnabled && pushPermission === "granted" ? (
+                <span className="rounded-full bg-teal-600 px-3 py-1 text-[11px] font-bold text-white">
+                  {t("emergencyNotificationsEnabled")}
+                </span>
+              ) : (
+                <button
+                  onClick={enablePush}
+                  disabled={pushPlatform === "unsupported"}
+                  className="rounded-full bg-teal-600 px-3 py-1 text-[11px] font-bold text-white hover:bg-teal-700 disabled:opacity-40"
+                >
+                  {t("emergencyNotificationsEnableButton")}
+                </button>
+              )}
+            </div>
+            <p className="mt-1.5 text-[11px] text-slate-400">{t("emergencyNotificationsExplain")}</p>
+            {pushPlatform === "unsupported" && (
+              <p className="mt-1.5 text-[11px] text-amber-600">{t("emergencyNotificationsUnsupported")}</p>
+            )}
+            {pushPermission === "denied" && (
+              <p className="mt-1.5 text-[11px] text-amber-600">{t("emergencyNotificationsDeniedNote")}</p>
+            )}
+          </div>
+
+          <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-sm font-medium text-slate-700">
+                <Volume2 className="h-3.5 w-3.5" /> {t("emergencySoundLabel")}
+              </div>
+              <button
+                onClick={() => setEmergencySoundEnabled(!emergencySoundEnabled)}
+                className={`rounded-full px-3 py-1 text-[11px] font-bold ${
+                  emergencySoundEnabled ? "bg-teal-600 text-white" : "bg-slate-200 text-slate-600"
+                }`}
+              >
+                {emergencySoundEnabled ? t("commonOn") : t("commonOff")}
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-sm font-medium text-slate-700">
                 <Bell className="h-3.5 w-3.5" /> {t("notificationsSettingsTitle")}

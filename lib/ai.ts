@@ -9,7 +9,7 @@
 // in whichever of the four supported languages the user has selected.
 
 import type { AnalyzeRequest, RiskAssessment } from "./types";
-import { translate, isLanguageCode, type LanguageCode } from "./i18n";
+import { translate, isLanguageCode, type LanguageCode } from "./i18n/shared";
 import type { TranslationKey } from "./i18n/en";
 
 interface ExplainInput extends AnalyzeRequest {

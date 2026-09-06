@@ -1,0 +1,19 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getUserFromRequest } from "@/lib/auth";
+import { registerDeviceToken, type DevicePlatform } from "@/lib/deviceTokens";
+
+export async function POST(req: NextRequest) {
+  const user = await getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+
+  const body = await req.json().catch(() => ({}));
+  const token = String(body.token ?? "").trim();
+  const platform: DevicePlatform = body.platform === "android" ? "android" : "web";
+
+  if (!token) {
+    return NextResponse.json({ error: "token is required" }, { status: 400 });
+  }
+
+  await registerDeviceToken(user.id, platform, token);
+  return NextResponse.json({ success: true });
+}

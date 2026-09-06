@@ -31,6 +31,7 @@ import MountainSelector from "@/components/MountainSelector";
 import RiskCountdown from "@/components/RiskCountdown";
 import LocationRiskCard from "@/components/LocationRiskCard";
 import CrowdDensityPanel from "@/components/CrowdDensityPanel";
+import DemoHazardControlPanel from "@/components/DemoHazardControlPanel";
 import { useScenario } from "@/lib/ScenarioContext";
 import { useAppState } from "@/lib/AppStateContext";
 import { useHazardAlert } from "@/lib/HazardAlertContext";
@@ -64,12 +65,12 @@ function DashboardInner() {
 
   const { scenario } = useScenario();
   const { familyMembers } = useAppState();
-  const { alertLevel } = useHazardAlert();
+  const { alertLevel, hazardTypeKey, crowdDensityOverride } = useHazardAlert();
   const { t } = useLanguage();
   const simulation = useDisasterSimulation(setTab, () => setImpactSignal((s) => s + 1));
   const alertColors = ALERT_LEVEL_COLORS[alertLevel];
   const totalEstimatedPeople = getTotalEstimatedPeople(scenario);
-  const highestDensity = getHighestCrowdDensity(scenario);
+  const highestDensity = crowdDensityOverride ?? getHighestCrowdDensity(scenario);
 
   const shelters = getShelters(scenario.region.id);
   const ambulances = getAmbulances(scenario.region.id);
@@ -143,7 +144,7 @@ function DashboardInner() {
                       {ALERT_LEVEL_EMOJI[alertLevel]} {t(ALERT_LEVEL_LABEL_KEY[alertLevel])}
                     </span>
                   </div>
-                  <div className="mt-1 text-xs font-medium text-slate-600">{t("hazardTypeAvalanche")}</div>
+                  <div className="mt-1 text-xs font-medium text-slate-600">{t(hazardTypeKey)}</div>
                 </div>
                 <div className="text-right">
                   <div className="text-[10px] tracking-wide text-slate-500">{t("riskLabel")}</div>
@@ -237,6 +238,7 @@ function DashboardInner() {
 
         {tab === "emergency" && (
           <div className="space-y-6">
+            <DemoHazardControlPanel />
             <AlertCenter scenario={scenario} />
             <div className="glass-panel flex flex-col items-center gap-4 rounded-2xl p-6">
               <div className="flex items-center gap-2 text-sm font-semibold tracking-wide text-slate-800">

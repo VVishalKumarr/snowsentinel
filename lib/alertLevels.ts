@@ -57,8 +57,23 @@ export const ALERT_LEVEL_COLORS: Record<AlertLevel, { text: string; bg: string; 
   CRITICAL: { text: "text-red-700", bg: "bg-red-50", border: "border-red-300" },
 };
 
-// This prototype's demo scenarios are all framed around a snow/ice
-// (avalanche-style) anomaly — see lib/demoData.ts — so hazard type is
-// currently constant rather than classified from data. Structured as its
-// own lookup so a real multi-hazard feed could set this per-scenario later.
+// This prototype's demo scenarios (lib/demoData.ts) are all framed around
+// a snow/ice (avalanche-style) anomaly, so the scenario-derived alert
+// (HazardAlertContext) uses this constant. The Demo Hazard Control Panel,
+// by contrast, lets the presenter pick any of the types below — that's a
+// separate, explicitly-labeled simulated event, not a reclassification of
+// the underlying satellite-style demo scenario.
 export const DEMO_HAZARD_TYPE_KEY: TranslationKey = "hazardTypeAvalanche";
+
+export type HazardType = "AVALANCHE" | "FLOOD" | "LANDSLIDE" | "EARTHQUAKE" | "SEVERE_WEATHER";
+
+export const HAZARD_TYPE_LABEL_KEY: Record<HazardType, TranslationKey> = {
+  AVALANCHE: "hazardTypeAvalanche",
+  FLOOD: "hazardTypeFlood",
+  LANDSLIDE: "hazardTypeLandslide",
+  EARTHQUAKE: "hazardTypeEarthquake",
+  SEVERE_WEATHER: "hazardTypeSevereWeather",
+};
+
+export const HAZARD_TYPES: HazardType[] = ["AVALANCHE", "FLOOD", "LANDSLIDE", "EARTHQUAKE", "SEVERE_WEATHER"];
+export const ALERT_LEVELS: AlertLevel[] = ["LOW", "MODERATE", "HIGH", "CRITICAL"];

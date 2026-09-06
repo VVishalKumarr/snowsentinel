@@ -10,7 +10,8 @@
 // the other independently — e.g. A can request a check-in from B without
 // that action also (incorrectly) changing what B sees about A.
 
-import { sql, ensureSchema, findUserByUsername, type DbUser } from "./db";
+import { sql, ensureSchema, findUserByUsername, findUserById, type DbUser } from "./db";
+import { sendPushToUsers } from "./pushService";
 
 export interface FamilyConnectionRow {
   id: number;
@@ -244,6 +245,28 @@ export async function sendSosToFamily(
       VALUES (${sosId}, ${recipientId}, 'UNREAD')
     `;
   }
+
+  // Real device push (FCM/Web Push), same infrastructure as automated
+  // hazard alerts but a distinct channel — a Family SOS is a person
+  // triggering it, not the alert engine, and must stay recognizable as
+  // such even though both can reach the same device.
+  if (authorizedIds.length > 0) {
+    const sender = await findUserById(senderId);
+    if (sender) {
+      sendPushToUsers(authorizedIds, {
+        channel: "FAMILY_SOS",
+        titleKey: "browserNotifSosTitle",
+        bodyKey: "sosActivatedMessage",
+        bodyVars: { name: sender.name },
+        data: { type: "sos", notificationId: String(sosId) },
+      }).catch(() => {
+        // Push delivery failure must never fail the SOS creation itself —
+        // the notification row (source of truth for the in-app/bell UI)
+        // is already committed above.
+      });
+    }
+  }
+
   return { sosId, notifiedCount: authorizedIds.length };
 }
 

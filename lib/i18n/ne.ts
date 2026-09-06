@@ -630,6 +630,33 @@ const ne: Record<TranslationKey, string> = {
   aiAssistantRiskExplainTemplate: "हालको प्रायोगिक जोखिम स्कोर {score}/१०० हो, जसलाई {level} को रूपमा वर्गीकृत गरिएको छ। {message}",
   aiAssistantShelterAnswerTemplate: "नजिकैको डेमो आश्रय लगभग {distance} किमी टाढा छ। पूर्ण सूची र दिशा-निर्देशहरूका लागि आश्रयस्थल ट्याब खोल्नुहोस्।",
   aiAssistantCountdownAnswerTemplate: "{countdown}",
+
+  pushHazardTitleCritical: "🚨 गम्भीर स्नोसेन्टिनल अलर्ट",
+  pushHazardTitleHigh: "⚠️ उच्च स्नोसेन्टिनल अलर्ट",
+  pushHazardTitleModerate: "स्नोसेन्टिनल सुरक्षा सूचना",
+
+  demoModeNavLabel: "🚨 डेमो खतरा अलर्ट",
+  demoModeWarningBadge: "⚠️ डेमो मोड",
+  demoModeWarningText: "यी अलर्टहरू प्रदर्शन उद्देश्यका लागि सिमुलेटेड हुन्। कुनै वास्तविक स्याटेलाइट/एआई पत्ता लगाइएको छैन।",
+  demoHazardTypeLabel: "खतराको प्रकार",
+  demoAlertLevelLabel: "अलर्ट स्तर",
+  demoAffectedAreaLabel: "प्रभावित क्षेत्र",
+  demoCountdownLabel: "उल्टो गणना",
+  demoTriggerButton: "खतरा अलर्ट सक्रिय गर्नुहोस्",
+  demoTriggerSuccess: "खतरा अलर्ट सिर्जना गरियो र {count} प्राप्तकर्तालाई पठाइयो।",
+  demoTriggerFailed: "खतरा अलर्ट सिर्जना गर्न सकिएन। कृपया फेरि प्रयास गर्नुहोस्।",
+  demoTriggerSending: "पठाइँदै…",
+
+  emergencyNotificationsSettingTitle: "🔔 आपतकालीन सूचनाहरू",
+  emergencyNotificationsExplain: "एप बन्द हुँदा पनि स्नोसेन्टिनललाई महत्वपूर्ण विपद् र पारिवारिक एसओएस अलर्टहरू पठाउन अनुमति दिनुहोस्।",
+  emergencyNotificationsEnableButton: "सक्षम गर्नुहोस्",
+  emergencyNotificationsEnabled: "सक्षम",
+  emergencyNotificationsUnsupported: "यो ब्राउजर/डिभाइसमा पुश सूचनाहरू समर्थित छैनन्।",
+  emergencyNotificationsDeniedNote: "सूचनाहरू बन्द छन्। तपाईं यिनलाई स्नोसेन्टिनलका लागि आफ्नो डिभाइस वा ब्राउजरको सूचना सेटिङबाट सक्षम गर्न सक्नुहुन्छ।",
+
+  emergencySoundLabel: "🔊 आपतकालीन ध्वनि",
+  muteAlertButton: "अलर्ट म्युट गर्नुहोस्",
+  soundAutoplayBlockedNote: "तपाईंले पृष्ठसँग अन्तरक्रिया नगरेसम्म तपाईंको ब्राउजरले अलर्ट ध्वनि रोक्यो — दृश्य अलर्ट अझै देखाइएको छ।",
 };
 
 export default ne;

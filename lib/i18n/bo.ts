@@ -635,6 +635,33 @@ const bo: Record<TranslationKey, string> = {
   aiAssistantRiskExplainTemplate: "ད་ལྟའི་དཔེ་སྟོན་ཉེན་ཁའི་གྲངས་ཀ་ {score}/༡༠༠ ཡིན། {level} ཞེས་དབྱེ་ཞིབ་བྱས་ཡོད། {message}",
   aiAssistantShelterAnswerTemplate: "ཉེ་ཤོས་དཔེ་སྟོན་སྐྱབས་གནས་ཐག་ {distance} ཀི་ལོ་མི་ཙམ་ཡོད། ཐོ་གཞུང་ཡོངས་རྫོགས་དང་ལམ་སྟོན་ཆེད་སྐྱབས་གནས་ངོས་ཁ་ཕྱེ།",
   aiAssistantCountdownAnswerTemplate: "{countdown}",
+
+  pushHazardTitleCritical: "🚨 SnowSentinel ཉེན་བརྡ་ཚབས་ཆེ།",
+  pushHazardTitleHigh: "⚠️ SnowSentinel ཉེན་བརྡ་མཐོ་བ།",
+  pushHazardTitleModerate: "SnowSentinel བདེ་འཇགས་བརྡ་ལན།",
+
+  demoModeNavLabel: "🚨 དཔེ་སྟོན་ཉེན་ཁའི་བརྡ་ལན།",
+  demoModeWarningBadge: "⚠️ དཔེ་སྟོན་ཐབས་ལམ།",
+  demoModeWarningText: "བརྡ་ལན་འདི་དག་སྟོན་བརྗོད་ཆེད་དཔེ་སྟོན་ཙམ་ཡིན། དངོས་གནས་ནམ་མཁའི་སྐར་མ/AI་ངོས་འཛིན་བྱུང་མེད།",
+  demoHazardTypeLabel: "ཉེན་ཁའི་རིགས།",
+  demoAlertLevelLabel: "བརྡ་ལན་གནས་རིམ།",
+  demoAffectedAreaLabel: "ཤུགས་རྐྱེན་ཁུལ།",
+  demoCountdownLabel: "ལོགས་གྲངས།",
+  demoTriggerButton: "ཉེན་ཁའི་བརྡ་ལན་ཞུགས་སུ་འཇུག",
+  demoTriggerSuccess: "ཉེན་ཁའི་བརྡ་ལན་བཟོས་ཤིང་ཐོབ་མཁན་ {count} ལ་བཏང་ཟིན།",
+  demoTriggerFailed: "ཉེན་ཁའི་བརྡ་ལན་བཟོ་མ་ཐུབ། སླར་འབད་རོགས།",
+  demoTriggerSending: "བཏང་བཞིན…",
+
+  emergencyNotificationsSettingTitle: "🔔 གྱོང་གནས་བརྡ་ལན།",
+  emergencyNotificationsExplain: "ཇི་ལྟར་ཡང་ SnowSentinel ལ་ཁྱེད་ཀྱི་ཉེན་ཁ་དང་ཁྱིམ་ཚང་ SOS བརྡ་ལན་གལ་ཆེན་བཏང་ཆོག་པར་བྱེད། ཉན་ཆས་ཁ་བརྒྱབ་ཀྱང་ཡིན།",
+  emergencyNotificationsEnableButton: "ཁ་ཕྱེ།",
+  emergencyNotificationsEnabled: "ཁ་ཕྱེ་ཟིན།",
+  emergencyNotificationsUnsupported: "འཕྲུལ་ཆས་འམ་བརའུ་ཟར་འདིར་གནོན་བརྡ་ལན་རྒྱབ་སྐྱོར་མེད།",
+  emergencyNotificationsDeniedNote: "བརྡ་ལན་ཁ་བརྒྱབ་ཡོད། ཁྱེད་ཀྱི་འཕྲུལ་ཆས་འམ་བརའུ་ཟར་གྱི་བརྡ་ལན་སྒྲིག་འགོད་ནས་ SnowSentinel ཆེད་ཁ་ཕྱེ་ཐུབ།",
+
+  emergencySoundLabel: "🔊 གྱོང་གནས་སྒྲ།",
+  muteAlertButton: "བརྡ་ལན་སྒྲ་བཀག",
+  soundAutoplayBlockedNote: "ཁྱེད་ཀྱིས་ངོས་དང་འབྲེལ་མཐུད་མ་བྱས་བར་ཁྱེད་ཀྱི་བརའུ་ཟར་གྱིས་བརྡ་ལན་སྒྲ་བཀག་ཡོད། མཐོང་ཐུབ་པའི་བརྡ་ལན་ད་དུང་སྟོན་བཞིན།",
 };
 
 export default bo;

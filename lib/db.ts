@@ -106,6 +106,63 @@ export function ensureSchema(): Promise<void> {
       await sql`ALTER TABLE sos_recipients ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'UNREAD'`;
       await sql`ALTER TABLE sos_recipients ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ`;
       await sql`ALTER TABLE sos_recipients ADD COLUMN IF NOT EXISTS acknowledged_at TIMESTAMPTZ`;
+
+      // Server-known preferences needed to render a push notification's
+      // text BEFORE it reaches the device (the app isn't running to
+      // translate it client-side) and to do a coarse, opt-in "is this user
+      // in the affected region" check for hazard alerts. Location here is
+      // only ever a region id + lat/lng the user explicitly shared via the
+      // existing location-alert opt-in — never silently collected.
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_language TEXT NOT NULL DEFAULT 'en'`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_region_id TEXT`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_location_lat DOUBLE PRECISION`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_location_lng DOUBLE PRECISION`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_location_at TIMESTAMPTZ`;
+
+      // One row per device/browser a user has enabled push notifications
+      // on — a user is never assumed to have exactly one device. `token`
+      // is the raw FCM registration token for platform='android', or the
+      // JSON-serialized PushSubscription for platform='web'.
+      await sql`
+        CREATE TABLE IF NOT EXISTS device_tokens (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          platform TEXT NOT NULL,
+          token TEXT NOT NULL,
+          active BOOLEAN NOT NULL DEFAULT TRUE,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+          UNIQUE(user_id, platform, token)
+        );
+      `;
+
+      // A real, persisted hazard-alert event — created either by the demo
+      // control panel or (in principle) a future real detection pipeline.
+      // This is the "single backend event" the push fan-out to web+Android
+      // is built from, not something conjured client-side.
+      await sql`
+        CREATE TABLE IF NOT EXISTS hazard_alerts (
+          id SERIAL PRIMARY KEY,
+          created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+          hazard_type TEXT NOT NULL,
+          alert_level TEXT NOT NULL,
+          region_id TEXT NOT NULL,
+          countdown_seconds INTEGER,
+          crowd_density TEXT,
+          is_demo BOOLEAN NOT NULL DEFAULT TRUE,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
+      `;
+      await sql`
+        CREATE TABLE IF NOT EXISTS hazard_alert_recipients (
+          id SERIAL PRIMARY KEY,
+          hazard_alert_id INTEGER NOT NULL REFERENCES hazard_alerts(id) ON DELETE CASCADE,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          delivered BOOLEAN NOT NULL DEFAULT FALSE,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+          UNIQUE(hazard_alert_id, user_id)
+        );
+      `;
     })();
   }
   return schemaReady;
@@ -121,6 +178,11 @@ export interface DbUser {
   username: string;
   password_hash: string;
   created_at: string;
+  preferred_language: string;
+  last_region_id: string | null;
+  last_location_lat: number | null;
+  last_location_lng: number | null;
+  last_location_at: string | null;
 }
 
 export async function generateUniqueCode(): Promise<string> {
@@ -154,4 +216,22 @@ export async function createUser(params: { name: string; username: string; passw
     RETURNING *
   `;
   return rows[0];
+}
+
+export async function updateUserLanguage(userId: number, language: string): Promise<void> {
+  await ensureSchema();
+  await sql`UPDATE users SET preferred_language = ${language} WHERE id = ${userId}`;
+}
+
+export async function updateUserLocation(
+  userId: number,
+  params: { regionId: string; lat: number; lng: number }
+): Promise<void> {
+  await ensureSchema();
+  await sql`
+    UPDATE users
+    SET last_region_id = ${params.regionId}, last_location_lat = ${params.lat},
+        last_location_lng = ${params.lng}, last_location_at = now()
+    WHERE id = ${userId}
+  `;
 }

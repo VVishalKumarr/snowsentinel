@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isLanguageCode, type LanguageCode } from "@/lib/i18n";
+import { isLanguageCode, type LanguageCode } from "@/lib/i18n/shared";
 
 // Optional live-AI fallback for the Safety Assistant, used ONLY when the
 // local rule-based knowledge base (lib/safetyAssistant.ts) doesn't match
